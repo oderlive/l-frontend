@@ -1,0 +1,34 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar__menu {
+    display: flex;
+    align-items: center;
+}
+
+.navbar__menu img {
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+}
+
+.navbar__menu span {
+    font-size: 30px;
+}
+
+.navbar__right{
+    display: flex;
+    align-items: center;
+}
+
+.add {
+    all: unset;
+    color: #fff;
+    cursor: pointer;
+}
