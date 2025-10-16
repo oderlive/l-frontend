@@ -4,12 +4,16 @@ import classMenu from '../../../assets/icons/class-menu.svg'
 import classAvatar from '../../../assets/icons/avatar.png'
 import classPoints from '../../../assets/icons/9points.png'
 import classPlus from '../../../assets/icons/plus.svg'
+import {useContext} from "react";
+import {MenuContext} from "../../../context/MenuContext";
 
 const Navbar = () => {
+    const { isMenuOpen, setIsMenuOpen } = useContext(MenuContext);
+
     return (
         <nav className={styles.navbar}>
             <div className={styles.navbar__menu}>
-                <img src={classMenu} alt="Menu" style={{width: 40, height: 40, cursor: 'pointer'}}/>
+                <img onClick={() => setIsMenuOpen(!isMenuOpen)} src={classMenu} alt="Menu" style={{width: 40, height: 40, cursor: 'pointer'}}/>
                 <img src={classIcon} alt="Logo"/>
                 <span>Класс</span>
             </div>
