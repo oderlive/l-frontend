@@ -4,10 +4,10 @@ export const MenuContext = createContext();
 
 export const Provider = ({ children }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    console.log(isMenuOpen)
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
-        <MenuContext.Provider value={{ isMenuOpen, setIsMenuOpen }}>
+        <MenuContext.Provider value={{ isMenuOpen, setIsMenuOpen, isModalOpen, setIsModalOpen }}>
             {children}
         </MenuContext.Provider>
     );
