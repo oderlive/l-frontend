@@ -1,0 +1,70 @@
+.tile {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px;
+    display: flex;
+    flex-direction: column;
+    max-height: 200px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+}
+
+.course {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.grade {
+    background-color: purple;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.content {
+    display: flex;
+    align-items: center;
+    margin-top: 16px;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.teacher {
+    margin: 0;
+}
+
+.actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+.actionButton {
+    background-color: transparent;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+}
+
+.actionButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.icon {
+    width: 20px;
+    height: 20px;
+}

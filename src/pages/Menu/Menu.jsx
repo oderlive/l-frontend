@@ -1,14 +1,15 @@
-import React, { useContext } from 'react';
+import React, {useContext, useState} from 'react';
 import { MenuContext } from '../../context/MenuContext';
 import styles from './Menu.module.css';
 
-const Menu = () => {
+const Menu = ({ setSelectedComponent }) => {
     const { isMenuOpen } = useContext(MenuContext);
+
     return (
         isMenuOpen && (
             <div className={styles.menu}>
                 <div className={styles.header}>
-                    <span className={styles.title}>Главная страница</span>
+                    <span className={styles.title} onClick={() => setSelectedComponent('general')}>Главная страница</span>
                 </div>
                 <ul className={styles.list}>
                     <li className={styles.item}>Календарь</li>
@@ -22,7 +23,7 @@ const Menu = () => {
                     <li className={styles.item}>Информационные системы и технологии</li>
                     <li className={styles.item}>ИС-М25</li>
                     <li className={styles.item}>ИС-М25 Блокчейн технологии</li>
-                    <li className={styles.item}>Архив курсов</li>
+                    <li className={styles.item} onClick={() => setSelectedComponent('archive')}>Архив курсов</li>
                     <li className={styles.item}>Настройки</li>
                 </ul>
             </div>
