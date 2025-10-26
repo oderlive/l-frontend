@@ -1,10 +1,12 @@
 import React, {lazy, Suspense, useState} from 'react';
-import { Provider } from './context/MenuContext';
+import { Provider as MenuProvider } from './context/MenuContext';
 import Navbar from './pages/Navbar/Navbar';
 import Menu from './pages/Menu/Menu';
 import ModalJoin from './shared/components/ModalJoin/ModalJoin';
 import Tile from './pages/Tile/Tile';
 import avatar from './assets/icons/avatar.png'
+import store from './features/api/store'
+import {Provider} from "react-redux";
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
 
@@ -12,29 +14,31 @@ function App() {
     const [selectedComponent, setSelectedComponent] = useState(null);
 
     return (
-        <Provider>
-            <Navbar />
-            <div style={{display: 'flex'}}>
-                <Menu setSelectedComponent={setSelectedComponent}  />
-                <Suspense fallback={<div>Загрузка...</div>}>
-                    {selectedComponent === 'archive' && <Archive />}
-                    {selectedComponent === 'general' &&
-                        <div
-                        style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'space-between',
-                            gap: '16px',
-                            padding: '16px',
-                        }}
-                    >
-                        {mockData.map((item, index) => (
-                            <Tile key={index} {...item} />
-                        ))}
-                    </div>}
-                </Suspense>
-            </div>
-            <ModalJoin />
+        <Provider store={store}>
+            <MenuProvider>
+                <Navbar />
+                <div style={{display: 'flex'}}>
+                    <Menu setSelectedComponent={setSelectedComponent}  />
+                    <Suspense fallback={<div>Загрузка...</div>}>
+                        {selectedComponent === 'archive' && <Archive />}
+                        {selectedComponent === 'general' &&
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    justifyContent: 'space-between',
+                                    gap: '16px',
+                                    padding: '16px',
+                                }}
+                            >
+                                {mockData.map((item, index) => (
+                                    <Tile key={index} {...item} />
+                                ))}
+                            </div>}
+                    </Suspense>
+                </div>
+                <ModalJoin />
+            </MenuProvider>
         </Provider>
     );
 }

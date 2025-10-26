@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, {useContext} from 'react';
 import { MenuContext } from '../../context/MenuContext';
 import styles from './Menu.module.css';
 
