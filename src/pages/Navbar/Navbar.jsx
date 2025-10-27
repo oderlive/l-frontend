@@ -9,6 +9,7 @@ import { useContext } from 'react';
 import { MenuContext } from '../../context/MenuContext';
 import Modal from '../../shared/components/Modal/Modal';
 import AccountManagement from '../AccountManagment/AccountManagment';
+import ModalJoin from "../../shared/components/ModalJoin/ModalJoin";
 
 const Navbar = () => {
     const {
@@ -59,11 +60,11 @@ const Navbar = () => {
                 </div>
             </nav>
 
-            <Modal
+            <ModalJoin
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
             >
-            </Modal>
+            </ModalJoin>
 
             <Modal
                 isOpen={isProfileModalOpen}

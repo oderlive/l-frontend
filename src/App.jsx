@@ -1,14 +1,22 @@
-import React, {lazy, Suspense, useState} from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { Provider as MenuProvider } from './context/MenuContext';
+import {
+    Box,
+    Grid,
+    Container,
+    CircularProgress,
+} from '@mui/material';
+import styles from './App.module.css'; // Добавляем импорт стилей
 import Navbar from './pages/Navbar/Navbar';
 import Menu from './pages/Menu/Menu';
 import ModalJoin from './shared/components/ModalJoin/ModalJoin';
 import Tile from './pages/Tile/Tile';
-import avatar from './assets/icons/avatar.png'
-import store from './features/api/store'
-import {Provider} from "react-redux";
+import avatar from './assets/icons/avatar.png';
+import store from './features/api/store';
+import { Provider } from 'react-redux';
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
+const Settings = lazy(() => import('./pages/Settings/Settings'));
 
 function App() {
     const [selectedComponent, setSelectedComponent] = useState(null);
@@ -16,28 +24,44 @@ function App() {
     return (
         <Provider store={store}>
             <MenuProvider>
-                <Navbar />
-                <div style={{display: 'flex'}}>
-                    <Menu setSelectedComponent={setSelectedComponent}  />
-                    <Suspense fallback={<div>Загрузка...</div>}>
-                        {selectedComponent === 'archive' && <Archive />}
-                        {selectedComponent === 'general' &&
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    justifyContent: 'space-between',
-                                    gap: '16px',
-                                    padding: '16px',
-                                }}
-                            >
-                                {mockData.map((item, index) => (
-                                    <Tile key={index} {...item} />
-                                ))}
-                            </div>}
-                    </Suspense>
+                <div className={styles.appContainer}>
+                    <Navbar />
+                    <Container maxWidth="xxl" sx={{ mt: 4 }} className={styles.contentWrapper}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={3}>
+                                <Menu setSelectedComponent={setSelectedComponent} />
+                            </Grid>
+                            <Grid item xs={9}>
+                                <Suspense
+                                    fallback={
+                                        <div className={styles.loadingSpinner}>
+                                            <CircularProgress />
+                                        </div>
+                                    }
+                                >
+                                    {selectedComponent === 'archive' && <Archive />}
+                                    {selectedComponent === 'settings' && <Settings />}
+                                    {selectedComponent === 'general' && (
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                justifyContent: 'space-between',
+                                                gap: 2,
+                                            }}
+                                            className={styles.tileContainer}
+                                        >
+                                            {mockData.map((item, index) => (
+                                                <Tile key={index} {...item} />
+                                            ))}
+                                        </Box>
+                                    )}
+                                </Suspense>
+                            </Grid>
+                        </Grid>
+                    </Container>
+                    <ModalJoin />
                 </div>
-                <ModalJoin />
             </MenuProvider>
         </Provider>
     );
@@ -57,7 +81,7 @@ const mockData = [
     },
     {
         course: 'test test',
-        teacher: 'Анастасия Теплякова',
+        teacher: 'test test',
         imageUrl: avatar,
     },
     {
