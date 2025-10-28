@@ -2,8 +2,6 @@ export const BASE_URL = 'http://195.43.142.64:8080/logos-lms/api/v1';
 
 export const ENDPOINTS = {
     LOGOUT: `${BASE_URL}/auth/logout`,
-    LOGIN: `${BASE_URL}/auth/login`,
-    REGISTER: `${BASE_URL}/auth/register`,
     ACTIVATE_ACCOUNT: `${BASE_URL}/auth/activate-account`,
     DISABLE_TFA: `${BASE_URL}/auth/disable-tfa`,
     ENABLE_TFA: `${BASE_URL}/auth/enable-tfa`,

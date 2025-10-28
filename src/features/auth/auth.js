@@ -11,24 +11,6 @@ export const logout = createAsyncThunk('auth/logout', async () => {
     }
 });
 
-export const login = createAsyncThunk('auth/login', async (credentials) => {
-    try {
-        const response = await axios.post(ENDPOINTS.LOGIN, credentials);
-        return response.data.user;
-    } catch (error) {
-        throw error;
-    }
-});
-
-export const register = createAsyncThunk('auth/register', async (userData) => {
-    try {
-        const response = await axios.post(ENDPOINTS.REGISTER, userData);
-        return response.data.user;
-    } catch (error) {
-        throw error;
-    }
-});
-
 export const activateAccount = createAsyncThunk(
     'auth/activateAccount', // имя действия (используется в редьюсерах)
     async (activationParams) => { // activationParams — параметры для активации (например, токен)
