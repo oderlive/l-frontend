@@ -15,6 +15,7 @@ import avatar from './assets/icons/avatar.png';
 import store from './features/api/store';
 import { Provider } from 'react-redux';
 
+
 const Archive = lazy(() => import('./pages/Archive/Archive'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
 

@@ -1,7 +1,4 @@
-import React, { useContext } from 'react';
-import { MenuContext } from '../../context/MenuContext';
-import styles from './Menu.module.css';
-
+import React, { useState } from 'react';
 import {
     HomeOutlined,
     CalendarTodayOutlined,
@@ -10,54 +7,117 @@ import {
     SettingsOutlined,
     ArchiveOutlined
 } from '@mui/icons-material';
+import styles from './Menu.module.css';
+
+const mockData = [
+    {
+        id: 1,
+        name: 'Учебное заведение 1',
+        groups: [
+            {
+                id: 11,
+                name: 'Группа A',
+                courses: [
+                    { id: 111, name: 'Курс 1' },
+                    { id: 112, name: 'Курс 2' }
+                ],
+            },
+            {
+                id: 12,
+                name: 'Группа B',
+                courses: [
+                    { id: 121, name: 'Курс 3' },
+                    { id: 122, name: 'Курс 4' }
+                ],
+            },
+        ],
+    },
+    {
+        id: 2,
+        name: 'Учебное заведение 2',
+        groups: [
+            {
+                id: 21,
+                name: 'Группа C',
+                courses: [
+                    { id: 211, name: 'Курс 5' },
+                    { id: 212, name: 'Курс 6' }
+                ],
+            },
+        ],
+    },
+];
 
 const Menu = ({ setSelectedComponent }) => {
-    const { isMenuOpen } = useContext(MenuContext);
+    const [expandedInstitutions, setExpandedInstitutions] = useState({});
+    const [expandedGroups, setExpandedGroups] = useState({});
+
+    const toggleInstitution = (id) => {
+        setExpandedInstitutions((prev) => ({
+            ...prev,
+            [id]: !prev[id],
+        }));
+    };
+
+    const toggleGroup = (id) => {
+        setExpandedGroups((prev) => ({
+            ...prev,
+            [id]: !prev[id],
+        }));
+    };
 
     return (
-        isMenuOpen && (
-            <div className={styles.menu}>
-                <div className={styles.header}>
-          <span
-              className={styles.title}
-              onClick={() => setSelectedComponent('general')}
-          >
-            <HomeOutlined /> Главная страница
-          </span>
-                </div>
-                <ul className={styles.list}>
-                    <li className={styles.item}>
-                        <CalendarTodayOutlined /> Календарь
-                    </li>
-                    <li className={styles.item}>
-                        <SchoolOutlined /> Курсы, слушателем которых вы являетесь
-                    </li>
-                    <li className={styles.item}>
-                        <AssignmentOutlined /> Список заданий
-                    </li>
-                    <li className={styles.item}>ИС-М25 Python</li>
-                    <li className={styles.item}>2025 2026 ИС М1</li>
-                    <li className={styles.item}>ИВТ-М24, ИС-М25. CV</li>
-                    <li className={styles.item}>Методы и системы поддержки принятия решений</li>
-                    <li className={styles.item}>ИС-М25 OC-2025</li>
-                    <li className={styles.item}>Информационные системы и технологии</li>
-                    <li className={styles.item}>ИС-М25</li>
-                    <li className={styles.item}>ИС-М25 Блокчейн технологии</li>
-                    <li
-                        className={styles.item}
-                        onClick={() => setSelectedComponent('archive')}
-                    >
-                        <ArchiveOutlined /> Архив курсов
-                    </li>
-                    <li
-                        className={styles.item}
-                        onClick={() => setSelectedComponent('settings')}
-                    >
-                        <SettingsOutlined /> Настройки
-                    </li>
-                </ul>
+        <div className={styles.menu}>
+            {/* Заголовок */}
+            <div className={styles.header}>
+        <span
+            className={styles.title}
+            onClick={() => setSelectedComponent('general')}
+        >
+          <HomeOutlined /> Главная страница
+        </span>
             </div>
-        )
+
+            {/* Отображение учебных заведений */}
+            {mockData.map((inst) => (
+                <div key={inst.id}>
+                    <div
+                        className={styles.item}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => toggleInstitution(inst.id)}
+                    >
+                        {expandedInstitutions[inst.id] ? '▼' : '►'} {inst.name}
+                    </div>
+
+                    {/* Группы внутри учебного заведения */}
+                    {expandedInstitutions[inst.id] &&
+                        inst.groups.map((group) => (
+                            <div key={group.id} style={{ paddingLeft: '20px' }}>
+                                <div
+                                    className={styles.item}
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => toggleGroup(group.id)}
+                                >
+                                    {expandedGroups[group.id] ? '▼' : '►'} {group.name}
+                                </div>
+
+                                {/* Курсы внутри группы */}
+                                {expandedGroups[group.id] &&
+                                    group.courses.map((course) => (
+                                        <div
+                                            key={course.id}
+                                            className={styles.item}
+                                            style={{ paddingLeft: '40px', cursor: 'pointer' }}
+                                            onClick={() => setSelectedComponent(course.name)}
+                                        >
+                                            {course.name}
+                                        </div>
+                                    ))}
+                            </div>
+                        ))}
+                </div>
+            ))}
+        </div>
     );
 };
 

@@ -5,7 +5,8 @@ import {
     Switch,
     Button,
     FormControlLabel,
-    Grid
+    Grid,
+    TextField
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -22,7 +23,6 @@ const Settings = () => {
     const dispatch = useDispatch();
 
     // Состояние для активации аккаунта
-    const [isAccountActive, setIsAccountActive] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -47,14 +47,20 @@ const Settings = () => {
     const [tfaResetLoading, setTfaResetLoading] = useState(false);
     const [tfaResetError, setTfaResetError] = useState(null);
 
+    // Состояния для email и токена активации
+    const [userEmail, setUserEmail] = useState('');
+    const [activationToken, setActivationToken] = useState('');
+
     // Обработчик активации аккаунта
     const handleAccountActivation = async () => {
         setLoading(true);
         setError(null);
 
         try {
-            await dispatch(activateAccount({ isActive: !isAccountActive }));
-            setIsAccountActive(!isAccountActive);
+            await dispatch(activateAccount({
+                email: userEmail,
+                token: activationToken
+            }));
             setError(null);
         } catch (err) {
             setError('Ошибка при активации аккаунта');
@@ -119,7 +125,7 @@ const Settings = () => {
         }
     };
 
-// Обработчик отправки ссылки на email
+    // Обработчик отправки ссылки на email
     const handleSendPasswordResetEmail = async () => {
         setPasswordResetEmailLoading(true);
         setPasswordResetEmailError(null);
@@ -136,7 +142,7 @@ const Settings = () => {
         }
     };
 
-// Обработчик сброса настроек 2FA
+    // Обработчик сброса настроек 2FA
     const handleResetTfaSettings = async () => {
         setTfaResetLoading(true);
         setTfaResetError(null);
@@ -170,27 +176,34 @@ const Settings = () => {
                 <Grid item xs={12}>
                     <Box mb={3}>
                         <Typography variant="h6">Активация аккаунта</Typography>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={isAccountActive}
-                                    onChange={() => handleAccountActivation()}
-                                    color="primary"
-                                    disabled={loading}
-                                />
-                            }
-                            label="Аккаунт активен"
+                        <TextField
+                            label="Email для активации"
+                            variant="outlined"
+                            fullWidth
+                            value={userEmail}
+                            onChange={(e) => setUserEmail(e.target.value)}
+                            required
+                            sx={{ mb: 2 }}
                         />
-                        <Box mt={1}>
-                            {loading && <Typography color="gray">Идет активация...</Typography>}
-                            {error && <Typography color="error">{error}</Typography>}
-                            {isAccountActive && !error && (
-                                <Typography color="success">Аккаунт активен</Typography>
-                            )}
-                            {!isAccountActive && !error && (
-                                <Typography color="warning">Аккаунт деактивирован</Typography>
-                            )}
-                        </Box>
+                        <TextField
+                            label="Активационный токен"
+                            variant="outlined"
+                            fullWidth
+                            value={activationToken}
+                            onChange={(e) => setActivationToken(e.target.value)}
+                            required
+                        />
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            disabled={loading}
+                            onClick={handleAccountActivation}
+                            sx={{ mt: 2 }}
+                        >
+                            Активировать аккаунт
+                        </Button>
+                        {loading && <Typography color="gray">Идет активация...</Typography>}
+                        {error && <Typography color="error">{error}</Typography>}
                     </Box>
                 </Grid>
 

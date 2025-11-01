@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux'; // Добавляем
 import styles from './Navbar.module.css';
 import classIcon from '../../assets/icons/class.svg';
 import classMenu from '../../assets/icons/class-menu.svg';
 import classAvatar from '../../assets/icons/avatar.png';
+import classSign from '../../assets/icons/sign.svg';
 import classPoints from '../../assets/icons/9points.png';
 import classPlus from '../../assets/icons/plus.svg';
 import { useContext } from 'react';
 import { MenuContext } from '../../context/MenuContext';
 import Modal from '../../shared/components/Modal/Modal';
 import AccountManagement from '../AccountManagment/AccountManagment';
-import ModalJoin from "../../shared/components/ModalJoin/ModalJoin";
+import ModalJoin from '../../shared/components/ModalJoin/ModalJoin';
 
 const Navbar = () => {
     const {
@@ -20,6 +22,21 @@ const Navbar = () => {
         isModalOpen,
         setIsModalOpen
     } = useContext(MenuContext);
+
+    // Получаем статус авторизации из Redux
+    const isLoggedIn = useSelector(state => state.auth.isLoggedIn);
+
+    // Локальное состояние для userId (только для инициализации)
+    const [userId, setUserId] = useState(localStorage.getItem('user_id'));
+
+    // Выбираем иконку: приоритет у isLoggedIn, fallback на localStorage
+    const avatarSrc = isLoggedIn ? classAvatar : classSign;
+
+    // Эффект: синхронизируем localState с localStorage при mount
+    useEffect(() => {
+        const currentUserId = localStorage.getItem('user_id');
+        setUserId(currentUserId);
+    }, []);
 
     return (
         <>
@@ -51,7 +68,7 @@ const Navbar = () => {
                         style={{ width: 30, height: 30, cursor: 'pointer' }}
                     />
                     <img
-                        src={classAvatar}
+                        src={avatarSrc}
                         alt="profile"
                         className={styles.avatar}
                         style={{ width: 60, height: 40, cursor: 'pointer' }}
@@ -63,8 +80,7 @@ const Navbar = () => {
             <ModalJoin
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-            >
-            </ModalJoin>
+            />
 
             <Modal
                 isOpen={isProfileModalOpen}

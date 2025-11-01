@@ -12,20 +12,24 @@ export const logout = createAsyncThunk('auth/logout', async () => {
 });
 
 export const activateAccount = createAsyncThunk(
-    'auth/activateAccount', // имя действия (используется в редьюсерах)
-    async (activationParams) => { // activationParams — параметры для активации (например, токен)
+    'auth/activateAccount',
+    async (activationParams) => {
         try {
-            const response = await axios.post(ENDPOINTS.ACTIVATE_ACCOUNT, activationParams);
-            return response.data; // возвращаем данные ответа (например, статус активации)
+            const response = await axios.post(ENDPOINTS.ACTIVATE_ACCOUNT, {
+                user_email: activationParams.email,
+                account_activation_token: activationParams.token
+            });
+            return response.data;
         } catch (error) {
-            throw error; // передаём ошибку дальше (можно обработать в редьюсере)
+            throw error;
         }
     }
 );
 
 
+
 export const disableTfa = createAsyncThunk(
-    'auth/disableTfa', // имя действия (используется в редьюсерах)
+    'auth/disableTfa',
     async (disableTfaParams) => { // disableTfaParams — параметры для отключения TFA (например, токен или ID сессии)
         try {
             const response = await axios.post(ENDPOINTS.DISABLE_TFA, disableTfaParams);
@@ -38,7 +42,7 @@ export const disableTfa = createAsyncThunk(
 
 
 export const enableTfa = createAsyncThunk(
-    'auth/enableTfa', // имя действия (используется в редьюсерах)
+    'auth/enableTfa',
     async (enableTfaParams) => { // enableTfaParams — параметры для включения TFA (например, токен или код подтверждения)
         try {
             const response = await axios.post(ENDPOINTS.ENABLE_TFA, enableTfaParams, {
