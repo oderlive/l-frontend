@@ -3,8 +3,11 @@ import styles from './Tile.module.css';
 import tileProfile from '../../assets/icons/profile-course.svg';
 import tileFolder from '../../assets/icons/folder.svg';
 import tileDots from '../../assets/icons/3-dots.svg';
+import {useNavigate} from "react-router-dom";
 
 const Tile = ({ course, teacher, imageUrl }) => {
+    const navigate = useNavigate();
+
     return (
         <div className={styles.tile}>
             <div className={styles.header}>
@@ -15,7 +18,7 @@ const Tile = ({ course, teacher, imageUrl }) => {
                 <p className={styles.teacher}>{teacher}</p>
             </div>
             <div className={styles.actions}>
-                <button className={styles.actionButton}>
+                <button className={styles.actionButton} onClick={() => navigate('/profile-tile')}>
                     <img src={tileProfile} alt="Профиль" className={styles.icon} />
                 </button>
                 <button className={styles.actionButton}>

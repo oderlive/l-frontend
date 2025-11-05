@@ -1,0 +1,89 @@
+.profileTile {
+    margin: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profileHeader {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #007bff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+}
+
+.avatarLetter {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.profileName {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+.taskFilter {
+    margin-bottom: 20px;
+}
+
+.taskFilter select {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.taskList {
+    display: flex;
+    flex-direction: column;
+}
+
+.taskItem {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.taskTitle {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+.taskStatus {
+    color: #666;
+    font-size: 14px;
+}
+
+.taskDetails {
+    display: flex;
+    justify-content: space-between;
+    color: #666;
+    font-size: 14px;
+}
+
+.taskDeadline {
+    margin-right: 10px;
+}
+
+.taskScore {
+    font-weight: 600;
+}

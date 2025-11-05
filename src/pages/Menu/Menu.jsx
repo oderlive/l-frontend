@@ -8,6 +8,7 @@ import {
     ArchiveOutlined
 } from '@mui/icons-material';
 import styles from './Menu.module.css';
+import {useNavigate} from "react-router-dom";
 
 const mockData = [
     {
@@ -51,6 +52,7 @@ const mockData = [
 const Menu = ({ setSelectedComponent }) => {
     const [expandedInstitutions, setExpandedInstitutions] = useState({});
     const [expandedGroups, setExpandedGroups] = useState({});
+    const navigate = useNavigate();
 
     const toggleInstitution = (id) => {
         setExpandedInstitutions((prev) => ({
@@ -72,7 +74,7 @@ const Menu = ({ setSelectedComponent }) => {
             <div className={styles.header}>
         <span
             className={styles.title}
-            onClick={() => setSelectedComponent('general')}
+            onClick={() => navigate('/')}
         >
           <HomeOutlined /> Главная страница
         </span>

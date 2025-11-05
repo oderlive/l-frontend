@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider as MenuProvider } from './context/MenuContext';
 import {
     Box,
@@ -14,6 +15,7 @@ import Tile from './pages/Tile/Tile';
 import avatar from './assets/icons/avatar.png';
 import store from './features/api/store';
 import { Provider } from 'react-redux';
+import ProfileTile from "./pages/ProfileTile/ProfileTile";
 
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
@@ -22,8 +24,10 @@ const Settings = lazy(() => import('./pages/Settings/Settings'));
 function App() {
     const [selectedComponent, setSelectedComponent] = useState(null);
 
+
     return (
         <Provider store={store}>
+            <Router>
             <MenuProvider>
                 <div className={styles.appContainer}>
                     <Navbar />
@@ -57,6 +61,24 @@ function App() {
                                             ))}
                                         </Box>
                                     )}
+                                    <Routes>
+                                        <Route path="/profile-tile" element={<ProfileTile name="Артур Артур" tasks={tasks} />} />
+                                        <Route path="/archive" element={<Archive/>} />
+                                        <Route path="/settings" element={<Settings/>} />
+                                        <Route path="/" element={<Box
+                                            sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                justifyContent: 'space-between',
+                                                gap: 2,
+                                            }}
+                                            className={styles.tileContainer}
+                                        >
+                                            {mockData.map((item, index) => (
+                                                <Tile key={index} {...item} />
+                                            ))}
+                                        </Box>} />
+                                    </Routes>
                                 </Suspense>
                             </Grid>
                         </Grid>
@@ -64,6 +86,7 @@ function App() {
                     <ModalJoin />
                 </div>
             </MenuProvider>
+            </Router>
         </Provider>
     );
 }
@@ -101,5 +124,12 @@ const mockData = [
         imageUrl: avatar,
     },
 ];
+
+const tasks = [
+    { title: 'Решение системы ОДУ', status: '01', score: 95 },
+    { title: 'Анализ DataFrame', status: '01', score: 100 },
+    { title: 'Линейная алгебра, numpy', status: '01', score: 100 },
+];
+
 
 export default App;
