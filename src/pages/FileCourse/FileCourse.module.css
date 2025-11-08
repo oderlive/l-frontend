@@ -1,0 +1,56 @@
+.fileCourseContainer {
+    padding: 16px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.headerFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+.filterGroup {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sortBtn {
+    text-transform: none;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.fileTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+}
+
+.fileTable th,
+.fileTable td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.fileTable th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.fileIcon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+.actions {
+    color: #757575;
+    cursor: pointer;
+}

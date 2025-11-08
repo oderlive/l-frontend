@@ -16,6 +16,7 @@ import avatar from './assets/icons/avatar.png';
 import store from './features/api/store';
 import { Provider } from 'react-redux';
 import ProfileTile from "./pages/ProfileTile/ProfileTile";
+import FileCourse from "./pages/FileCourse/FileCourse";
 
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
@@ -65,6 +66,7 @@ function App() {
                                         <Route path="/profile-tile" element={<ProfileTile name="Артур Артур" tasks={tasks} />} />
                                         <Route path="/archive" element={<Archive/>} />
                                         <Route path="/settings" element={<Settings/>} />
+                                        <Route path="/file-course" element={<FileCourse/>} />
                                         <Route path="/" element={<Box
                                             sx={{
                                                 display: 'flex',
