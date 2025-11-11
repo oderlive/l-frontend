@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import {
+    Button,
+    TextField,
+    Select,
+    MenuItem,
+    Typography,
+    Box,
+    CircularProgress,
+    Modal as MuiModal,     // Переименовываем, чтобы не конфликтовало
+    Backdrop
+} from '@mui/material';
 import {
     HomeOutlined,
-    CalendarTodayOutlined,
-    SchoolOutlined,
-    AssignmentOutlined,
-    SettingsOutlined,
-    ArchiveOutlined
+    ArrowDropDown,
+    ArrowDropUp,
+    Add as AddIcon
 } from '@mui/icons-material';
-import styles from './Menu.module.css';
-import {useNavigate} from "react-router-dom";
 
+import styles from './Menu.module.css';
+import { useNavigate } from 'react-router-dom';
+import { createInstitution } from '../../features/institutions/institutions';
 const mockData = [
     {
         id: 1,
@@ -52,6 +63,18 @@ const mockData = [
 const Menu = ({ setSelectedComponent }) => {
     const [expandedInstitutions, setExpandedInstitutions] = useState({});
     const [expandedGroups, setExpandedGroups] = useState({});
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [formData, setFormData] = useState({
+        email: '',
+        location: '',
+        short_name: '',
+        full_name: '',
+        institution_type: 'SCHOOL',
+    });
+    const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const toggleInstitution = (id) => {
@@ -68,6 +91,42 @@ const Menu = ({ setSelectedComponent }) => {
         }));
     };
 
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const resultAction = await dispatch(createInstitution(formData));
+
+            if (createInstitution.fulfilled.match(resultAction)) {
+                alert('Учебное заведение успешно создано!');
+                setIsModalOpen(false);
+                setFormData({
+                    email: '',
+                    location: '',
+                    short_name: '',
+                    full_name: '',
+                    institution_type: 'SCHOOL',
+                });
+            } else {
+                setError(resultAction.error.message || 'Ошибка при создании');
+            }
+        } catch (err) {
+            setError('Произошла ошибка сети');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className={styles.menu}>
             {/* Заголовок */}
@@ -76,49 +135,178 @@ const Menu = ({ setSelectedComponent }) => {
             className={styles.title}
             onClick={() => navigate('/')}
         >
-          <HomeOutlined /> Главная страница
+          <Button startIcon={<HomeOutlined />} size="small">
+            Главная страница
+          </Button>
         </span>
             </div>
 
-            {/* Отображение учебных заведений */}
+            {/* Список учреждений */}
             {mockData.map((inst) => (
                 <div key={inst.id}>
                     <div
                         className={styles.item}
-                        style={{ cursor: 'pointer' }}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                         onClick={() => toggleInstitution(inst.id)}
                     >
-                        {expandedInstitutions[inst.id] ? '▼' : '►'} {inst.name}
+                        {expandedInstitutions[inst.id] ? <ArrowDropUp /> : <ArrowDropDown />}
+                        <Typography variant="body1">{inst.name}</Typography>
                     </div>
 
-                    {/* Группы внутри учебного заведения */}
                     {expandedInstitutions[inst.id] &&
                         inst.groups.map((group) => (
-                            <div key={group.id} style={{ paddingLeft: '20px' }}>
+                            <div key={group.id} style={{ paddingLeft: '32px' }}>
                                 <div
                                     className={styles.item}
-                                    style={{ cursor: 'pointer' }}
+                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                                     onClick={() => toggleGroup(group.id)}
                                 >
-                                    {expandedGroups[group.id] ? '▼' : '►'} {group.name}
+                                    {expandedGroups[group.id] ? <ArrowDropUp /> : <ArrowDropDown />}
+                                    <Typography variant="body2">{group.name}</Typography>
                                 </div>
 
-                                {/* Курсы внутри группы */}
                                 {expandedGroups[group.id] &&
                                     group.courses.map((course) => (
                                         <div
                                             key={course.id}
                                             className={styles.item}
-                                            style={{ paddingLeft: '40px', cursor: 'pointer' }}
+                                            style={{ paddingLeft: '48px', cursor: 'pointer' }}
                                             onClick={() => setSelectedComponent(course.name)}
                                         >
-                                            {course.name}
+                                            <Typography variant="body2">{course.name}</Typography>
                                         </div>
                                     ))}
                             </div>
                         ))}
                 </div>
             ))}
+
+            {/* Кнопка открытия модального окна */}
+            <Box mt={2} ml={1}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={() => setIsModalOpen(true)}
+                >
+                    Добавить учебное заведение
+                </Button>
+            </Box>
+
+            {/* Модальное окно (MUI) */}
+            <MuiModal
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                BackdropComponent={Backdrop}
+                BackdropProps={{
+                    timeout: 500,
+                }}
+            >
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 400,
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 4,
+                    }}
+                >
+                    <Typography variant="h6" mb={2}>
+                        Создать учебное заведение
+                    </Typography>
+
+                    {error && (
+                        <Typography color="error" variant="body2" mb={2}>
+                            {error}
+                        </Typography>
+                    )}
+
+                    <form onSubmit={handleSubmit}>
+                        <TextField
+                            fullWidth
+                            label="Email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            required
+                            margin="normal"
+                            size="small"
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Местоположение"
+                            name="location"
+                            value={formData.location}
+                            onChange={handleInputChange}
+                            required
+                            margin="normal"
+                            size="small"
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Короткое название"
+                            name="short_name"
+                            value={formData.short_name}
+                            onChange={handleInputChange}
+                            required
+                            margin="normal"
+                            size="small"
+                        />
+
+                        <TextField
+                            fullWidth
+                            label="Полное название"
+                            name="full_name"
+                            value={formData.full_name}
+                            onChange={handleInputChange}
+                            required
+                            margin="normal"
+                            size="small"
+                        />
+
+                        <Select
+                            fullWidth
+                            value={formData.institution_type}
+                            onChange={handleInputChange}
+                            name="institution_type"
+                            displayEmpty
+                            margin="normal"
+                            size="small"
+                        >
+                            <MenuItem value="SCHOOL">Школа</MenuItem>
+                            <MenuItem value="COLLEGE">Колледж</MenuItem>
+                            <MenuItem value="UNIVERSITY">Университет</MenuItem>
+                            <MenuItem value="OTHER">Другое</MenuItem>
+                        </Select>
+
+                        <Box mt={3} display="flex" gap={2}>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                color="primary"
+                                disabled={isLoading}
+                                startIcon={isLoading ? <CircularProgress size={20} /> : null}
+                            >
+                                {isLoading ? 'Создаётся...' : 'Создать'}
+                            </Button>
+
+                            <Button
+                                variant="outlined"
+                                onClick={() => setIsModalOpen(false)}
+                            >
+                                Отмена
+                            </Button>
+                        </Box>
+                    </form>
+                </Box>
+            </MuiModal>
         </div>
     );
 };
