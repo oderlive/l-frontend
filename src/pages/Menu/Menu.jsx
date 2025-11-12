@@ -8,7 +8,7 @@ import {
     Typography,
     Box,
     CircularProgress,
-    Modal as MuiModal,     // Переименовываем, чтобы не конфликтовало
+    Modal as MuiModal,
     Backdrop
 } from '@mui/material';
 import {
@@ -21,6 +21,8 @@ import {
 import styles from './Menu.module.css';
 import { useNavigate } from 'react-router-dom';
 import { createInstitution } from '../../features/institutions/institutions';
+import {addGroup, deleteGroup} from "../../features/group/group";
+
 const mockData = [
     {
         id: 1,
@@ -73,6 +75,13 @@ const Menu = ({ setSelectedComponent }) => {
     });
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Состояние для работы с группами
+    const [isAddingGroup, setIsAddingGroup] = useState(false);
+    const [groupFormData, setGroupFormData] = useState({ name: '' });
+    const [groupError, setGroupError] = useState(null);
+    const [groupLoading, setGroupLoading] = useState(false);
+    const institutionId = mockData[0].id; // ID учебного заведения для API-запросов
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -127,6 +136,41 @@ const Menu = ({ setSelectedComponent }) => {
         }
     };
 
+    // Добавление группы (POST /groups)
+    const handleAddGroup = async (e) => {
+        e.preventDefault();
+        setGroupLoading(true);
+        setGroupError(null);
+
+        try {
+            const newGroup = await addGroup(institutionId, groupFormData);
+            // Обновляем mockData (не делаем повторный запрос к API)
+            mockData[0].groups.push(newGroup);
+            setIsAddingGroup(false);
+            setGroupFormData({ name: '' });
+            alert('Группа успешно добавлена!');
+        } catch (error) {
+            setGroupError(error.message || 'Ошибка при добавлении группы');
+        } finally {
+            setGroupLoading(false);
+        }
+    };
+
+    // Удаление группы (DELETE /groups/{id})
+    const handleDeleteGroup = async (groupId) => {
+        setGroupLoading(true);
+        try {
+            await deleteGroup(groupId);
+            // Удаляем группу из mockData
+            mockData[0].groups = mockData[0].groups.filter(group => group.id !== groupId);
+            alert('Группа удалена!');
+        } catch (error) {
+            setGroupError(error.message || 'Ошибка при удалении группы');
+        } finally {
+            setGroupLoading(false);
+        }
+    };
+
     return (
         <div className={styles.menu}>
             {/* Заголовок */}
@@ -163,6 +207,14 @@ const Menu = ({ setSelectedComponent }) => {
                                 >
                                     {expandedGroups[group.id] ? <ArrowDropUp /> : <ArrowDropDown />}
                                     <Typography variant="body2">{group.name}</Typography>
+                                    <Button
+                                        variant="outlined"
+                                        color="error"
+                                        size="small"
+                                        onClick={() => handleDeleteGroup(group.id)}
+                                    >
+                                        Удалить
+                                    </Button>
                                 </div>
 
                                 {expandedGroups[group.id] &&
@@ -181,7 +233,7 @@ const Menu = ({ setSelectedComponent }) => {
                 </div>
             ))}
 
-            {/* Кнопка открытия модального окна */}
+            {/* Кнопка открытия модального окна для заведения */}
             <Box mt={2} ml={1}>
                 <Button
                     variant="contained"
@@ -193,14 +245,12 @@ const Menu = ({ setSelectedComponent }) => {
                 </Button>
             </Box>
 
-            {/* Модальное окно (MUI) */}
+            {/* Модальное окно для заведения */}
             <MuiModal
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 BackdropComponent={Backdrop}
-                BackdropProps={{
-                    timeout: 500,
-                }}
+                BackdropProps={{ timeout: 500 }}
             >
                 <Box
                     sx={{
@@ -300,6 +350,82 @@ const Menu = ({ setSelectedComponent }) => {
                             <Button
                                 variant="outlined"
                                 onClick={() => setIsModalOpen(false)}
+                            >
+                                Отмена
+                            </Button>
+                        </Box>
+                    </form>
+                </Box>
+            </MuiModal>
+
+            {/* Кнопка добавления группы */}
+            <Box mt={2} ml={1}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={() => setIsAddingGroup(true)}
+                >
+                    Добавить группу
+                </Button>
+            </Box>
+
+            {/* Модальное окно для добавления группы */}
+            <MuiModal
+                open={isAddingGroup}
+                onClose={() => setIsAddingGroup(false)}
+                BackdropComponent={Backdrop}
+                BackdropProps={{ timeout: 500 }}
+            >
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 300,
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 4,
+                    }}
+                >
+                    <Typography variant="h6" mb={2}>
+                        Создать группу
+                    </Typography>
+
+                    {groupError && (
+                        <Typography color="error" variant="body2" mb={2}>
+                            {groupError}
+                        </Typography>
+                    )}
+
+                    <form onSubmit={handleAddGroup}>
+                        <TextField
+                            fullWidth
+                            label="Название группы"
+                            name="name"
+                            value={groupFormData.name}
+                            onChange={(e) => setGroupFormData({ name: e.target.value })}
+                            required
+                            margin="normal"
+                            size="small"
+                        />
+
+                        <Box mt={3} display="flex" gap={2}>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                color="primary"
+                                disabled={groupLoading}
+                                startIcon={groupLoading ? <CircularProgress size={20} /> : null}
+                            >
+                                {groupLoading ? 'Создаётся...' : 'Создать'}
+                            </Button>
+
+                            <Button
+                                variant="outlined"
+                                onClick={() => setIsAddingGroup(false)}
                             >
                                 Отмена
                             </Button>

@@ -7,7 +7,7 @@ import {
     Container,
     CircularProgress,
 } from '@mui/material';
-import styles from './App.module.css'; // Добавляем импорт стилей
+import styles from './App.module.css';
 import Navbar from './pages/Navbar/Navbar';
 import Menu from './pages/Menu/Menu';
 import ModalJoin from './shared/components/ModalJoin/ModalJoin';

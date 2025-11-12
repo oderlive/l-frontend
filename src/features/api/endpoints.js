@@ -12,5 +12,7 @@ export const ENDPOINTS = {
     RESET_PASSWORD: `${BASE_URL}/auth/reset-password`, // сброс пароля
     REFRESH_ACCESS_TOKEN: `${BASE_URL}/auth/refresh-access-token`, // обновление токена доступа
     MAKE_AUTH: `${BASE_URL}/auth/make-auth`, // аутентификация пользователя
-    INSTITUTIONS: `${BASE_URL}/institutions` // добавление учебного заведения
+    INSTITUTIONS: `${BASE_URL}/institutions`, // добавление учебного заведения
+    GROUP: `${BASE_URL}/group`,
+    USERS: `${BASE_URL}/users`,
 };
