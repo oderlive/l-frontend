@@ -14,5 +14,5 @@ export const ENDPOINTS = {
     MAKE_AUTH: `${BASE_URL}/auth/make-auth`, // аутентификация пользователя
     INSTITUTIONS: `${BASE_URL}/institutions`, // добавление учебного заведения
     GROUP: `${BASE_URL}/group`,
-    USERS: `${BASE_URL}/users`,
+    USERS: `${BASE_URL}/users/institution`,
 };

@@ -123,10 +123,19 @@ export const resetPassword = createAsyncThunk(
     }
 );
 
+const getRefreshToken = () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+        throw new Error('refresh_token не найден в refreshToken');
+    }
+    return refreshToken;
+};
+
 // Обновление токена доступа
 export const refreshAccessToken = createAsyncThunk(
     'auth/refreshAccessToken',
-    async (refreshToken) => {
+    async () => {
+        const refreshToken = getRefreshToken();
         try {
             const response = await axios.post(ENDPOINTS.REFRESH_ACCESS_TOKEN, { refreshToken });
             return response.data;

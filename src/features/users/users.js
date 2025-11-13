@@ -1,19 +1,24 @@
 import axios from 'axios';
+import { ENDPOINTS } from "../api/endpoints";
 
-// Базовая конфигурация axios с использованием BASE_URL
-const BASE_URL = 'https://ваш-базовый-URL'; // замените на актуальный URL
-const api = axios.create({
-    baseURL: `${BASE_URL}/users`, // используем указанный путь
-    timeout: 10000,
-});
+// Функция для получения user_id из localStorage
+const getUserIdFromStorage = () => {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+        throw new Error('user_id не найден в localStorage');
+    }
+    return userId;
+};
 
 // Функция для получения информации об учреждении пользователя
-export const getUserInstitution = async (userId) => {
+export const getUserInstitution = async () => {
     try {
-        const response = await api.get('/institution', {
-            params: { user_id: userId }, // передаём user_id как параметр запроса (query)
+        const finalUserId = getUserIdFromStorage();
+
+        const response = await axios.get(ENDPOINTS.USERS, {
+            params: { user_id: finalUserId },
         });
-        return response.data; // возвращаем данные из ответа
+        return response.data;
     } catch (error) {
         throw new Error(`Ошибка при получении данных об учреждении: ${error.message}`);
     }

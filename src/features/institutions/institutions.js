@@ -8,6 +8,7 @@ export const fetchInstitutions = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const response = await axios.get(ENDPOINTS.INSTITUTIONS);
+            console.log(response.data)
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response?.data || error.message);

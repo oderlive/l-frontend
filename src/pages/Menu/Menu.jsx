@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import {
     Button,
@@ -15,13 +15,15 @@ import {
     HomeOutlined,
     ArrowDropDown,
     ArrowDropUp,
-    Add as AddIcon
+    Add as AddIcon,
+    Refresh as RefreshIcon
 } from '@mui/icons-material';
 
 import styles from './Menu.module.css';
 import { useNavigate } from 'react-router-dom';
-import { createInstitution } from '../../features/institutions/institutions';
-import {addGroup, deleteGroup} from "../../features/group/group";
+import { createInstitution, fetchInstitutions } from '../../features/institutions/institutions';
+import { addGroup, deleteGroup } from '../../features/group/group';
+import {refreshAccessToken} from "../../features/auth/auth";
 
 const mockData = [
     {
@@ -63,6 +65,7 @@ const mockData = [
 ];
 
 const Menu = ({ setSelectedComponent }) => {
+    const [institutions, setInstitutions] = useState(mockData);
     const [expandedInstitutions, setExpandedInstitutions] = useState({});
     const [expandedGroups, setExpandedGroups] = useState({});
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,6 +78,8 @@ const Menu = ({ setSelectedComponent }) => {
     });
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [fetchLoading, setFetchLoading] = useState(false); // Загрузка для fetch
+
 
     // Состояние для работы с группами
     const [isAddingGroup, setIsAddingGroup] = useState(false);
@@ -85,6 +90,33 @@ const Menu = ({ setSelectedComponent }) => {
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    // Функция загрузки учреждений
+    const loadInstitutions = async () => {
+        setFetchLoading(true);
+        setError(null);
+
+        try {
+            console.log('[Menu] Начинаем загрузку учреждений...');
+            await dispatch(refreshAccessToken())
+            const resultAction = await dispatch(fetchInstitutions());
+
+
+            if (fetchInstitutions.fulfilled.match(resultAction)) {
+                console.log('[Menu] Учреждения загружены:', resultAction.payload);
+                setInstitutions(resultAction.payload);
+                alert('Учреждения успешно загружены!');
+            } else {
+                setError('Не удалось загрузить учреждения');
+                console.error('[Menu] Ошибка загрузки:', resultAction.error);
+            }
+        } catch (err) {
+            setError('Произошла ошибка сети при загрузке учреждений');
+            console.error('[Menu] Сетевая ошибка:', err);
+        } finally {
+            setFetchLoading(false);
+        }
+    };
 
     const toggleInstitution = (id) => {
         setExpandedInstitutions((prev) => ({
@@ -144,7 +176,6 @@ const Menu = ({ setSelectedComponent }) => {
 
         try {
             const newGroup = await addGroup(institutionId, groupFormData);
-            // Обновляем mockData (не делаем повторный запрос к API)
             mockData[0].groups.push(newGroup);
             setIsAddingGroup(false);
             setGroupFormData({ name: '' });
@@ -161,7 +192,6 @@ const Menu = ({ setSelectedComponent }) => {
         setGroupLoading(true);
         try {
             await deleteGroup(groupId);
-            // Удаляем группу из mockData
             mockData[0].groups = mockData[0].groups.filter(group => group.id !== groupId);
             alert('Группа удалена!');
         } catch (error) {
@@ -185,8 +215,21 @@ const Menu = ({ setSelectedComponent }) => {
         </span>
             </div>
 
+            {/* Кнопка для загрузки учреждений */}
+            <Box mt={2} ml={1} mb={2}>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={fetchLoading ? <CircularProgress size={20} /> : <RefreshIcon />}
+                    onClick={loadInstitutions}
+                    disabled={fetchLoading}
+                >
+                    {fetchLoading ? 'Загружается...' : 'Обновить учреждения'}
+                </Button>
+            </Box>
+
             {/* Список учреждений */}
-            {mockData.map((inst) => (
+            {institutions.map((inst) => (
                 <div key={inst.id}>
                     <div
                         className={styles.item}
@@ -212,6 +255,7 @@ const Menu = ({ setSelectedComponent }) => {
                                         color="error"
                                         size="small"
                                         onClick={() => handleDeleteGroup(group.id)}
+                                        disabled={groupLoading}
                                     >
                                         Удалить
                                     </Button>
