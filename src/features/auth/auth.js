@@ -1,7 +1,8 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import {ENDPOINTS} from "../api/endpoints";
+import { ENDPOINTS } from '../api/endpoints';
 
+// Лог аут
 export const logout = createAsyncThunk('auth/logout', async () => {
     try {
         const response = await axios.post(ENDPOINTS.LOGOUT);
@@ -11,13 +12,14 @@ export const logout = createAsyncThunk('auth/logout', async () => {
     }
 });
 
+// Активация аккаунта
 export const activateAccount = createAsyncThunk(
     'auth/activateAccount',
     async (activationParams) => {
         try {
             const response = await axios.post(ENDPOINTS.ACTIVATE_ACCOUNT, {
                 user_email: activationParams.email,
-                account_activation_token: activationParams.token
+                account_activation_token: activationParams.token,
             });
             return response.data;
         } catch (error) {
@@ -26,44 +28,48 @@ export const activateAccount = createAsyncThunk(
     }
 );
 
-
-
+// Отключение TFA
 export const disableTfa = createAsyncThunk(
     'auth/disableTfa',
-    async (disableTfaParams) => { // disableTfaParams — параметры для отключения TFA (например, токен или ID сессии)
+    async (disableTfaParams) => {
         try {
             const response = await axios.post(ENDPOINTS.DISABLE_TFA, disableTfaParams);
-            return response.data; // возвращаем данные ответа (например, статус отключения TFA)
+            return response.data;
         } catch (error) {
-            throw error; // передаём ошибку дальше (можно обработать в редьюсере)
+            throw error;
         }
     }
 );
 
-
+// Включение TFA
 export const enableTfa = createAsyncThunk(
     'auth/enableTfa',
-    async (enableTfaParams) => { // enableTfaParams — параметры для включения TFA (например, токен или код подтверждения)
+    async (enableTfaParams) => {
         try {
-            const response = await axios.post(ENDPOINTS.ENABLE_TFA, enableTfaParams, {
-                headers: {
-                    'Content-Type': 'application/json'
+            const response = await axios.post(
+                ENDPOINTS.ENABLE_TFA,
+                enableTfaParams,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                 }
-            });
-            return response.data; // возвращаем данные ответа (например, статус включения TFA)
+            );
+            return response.data;
         } catch (error) {
-            throw error; // передаём ошибку дальше (можно обработать в редьюсере)
+            throw error;
         }
     }
 );
 
-
-// Верификация 2FA кода
+// Верификация TFA кода
 export const verifyTfaCode = createAsyncThunk(
     'auth/verifyTfaCode',
     async (tfaCode) => {
         try {
-            const response = await axios.post(ENDPOINTS.VERIFY_TFA_CODE, { code: tfaCode });
+            const response = await axios.post(ENDPOINTS.VERIFY_TFA_CODE, {
+                code: tfaCode,
+            });
             return response.data;
         } catch (error) {
             throw error;
@@ -71,12 +77,15 @@ export const verifyTfaCode = createAsyncThunk(
     }
 );
 
-// Отправка сообщения для сброса 2FA secret
+// Отправка письма для сброса TFA secret
 export const sendMailForTfaSecretReset = createAsyncThunk(
     'auth/sendMailForTfaSecretReset',
     async (email) => {
         try {
-            const response = await axios.post(ENDPOINTS.SEND_MAIL_FOR_TFA_SECRET_RESET, { email });
+            const response = await axios.post(
+                ENDPOINTS.SEND_MAIL_FOR_TFA_SECRET_RESET,
+                { email }
+            );
             return response.data;
         } catch (error) {
             throw error;
@@ -84,12 +93,15 @@ export const sendMailForTfaSecretReset = createAsyncThunk(
     }
 );
 
-// Отправка сообщения для сброса пароля
+// Отправка письма для сброса пароля
 export const sendMailForPasswordReset = createAsyncThunk(
     'auth/sendMailForPasswordReset',
     async (email) => {
         try {
-            const response = await axios.post(ENDPOINTS.SEND_MAIL_FOR_PASSWORD_RESET, { email });
+            const response = await axios.post(
+                ENDPOINTS.SEND_MAIL_FOR_PASSWORD_RESET,
+                { email }
+            );
             return response.data;
         } catch (error) {
             throw error;
@@ -97,7 +109,7 @@ export const sendMailForPasswordReset = createAsyncThunk(
     }
 );
 
-// Сброс 2FA secret
+// Сброс TFA
 export const resetTfa = createAsyncThunk(
     'auth/resetTfa',
     async (resetParams) => {
@@ -115,7 +127,10 @@ export const resetPassword = createAsyncThunk(
     'auth/resetPassword',
     async (passwordResetParams) => {
         try {
-            const response = await axios.post(ENDPOINTS.RESET_PASSWORD, passwordResetParams);
+            const response = await axios.post(
+                ENDPOINTS.RESET_PASSWORD,
+                passwordResetParams
+            );
             return response.data;
         } catch (error) {
             throw error;
@@ -123,21 +138,24 @@ export const resetPassword = createAsyncThunk(
     }
 );
 
+// Получение refresh_token из localStorage
 const getRefreshToken = () => {
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {
-        throw new Error('refresh_token не найден в refreshToken');
+        throw new Error('refresh_token не найден в localStorage');
     }
     return refreshToken;
 };
 
-// Обновление токена доступа
+// Обновление access_token
 export const refreshAccessToken = createAsyncThunk(
     'auth/refreshAccessToken',
     async () => {
-        const refreshToken = getRefreshToken();
+        const refresh_token = getRefreshToken();
         try {
-            const response = await axios.post(ENDPOINTS.REFRESH_ACCESS_TOKEN, { refreshToken });
+            const response = await axios.post(ENDPOINTS.REFRESH_ACCESS_TOKEN, {
+                refresh_token,
+            });
             return response.data;
         } catch (error) {
             throw error;
@@ -157,4 +175,3 @@ export const makeAuth = createAsyncThunk(
         }
     }
 );
-

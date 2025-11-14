@@ -16,138 +16,80 @@ import {
     ArrowDropDown,
     ArrowDropUp,
     Add as AddIcon,
-    Refresh as RefreshIcon
+    Refresh as RefreshIcon,
+    School as SchoolIcon,
+    GroupAdd as GroupAddIcon
 } from '@mui/icons-material';
 
 import styles from './Menu.module.css';
 import { useNavigate } from 'react-router-dom';
 import { createInstitution, fetchInstitutions } from '../../features/institutions/institutions';
-import { addGroup, deleteGroup } from '../../features/group/group';
-import {refreshAccessToken} from "../../features/auth/auth";
-
-const mockData = [
-    {
-        id: 1,
-        name: 'Учебное заведение 1',
-        groups: [
-            {
-                id: 11,
-                name: 'Группа A',
-                courses: [
-                    { id: 111, name: 'Курс 1' },
-                    { id: 112, name: 'Курс 2' }
-                ],
-            },
-            {
-                id: 12,
-                name: 'Группа B',
-                courses: [
-                    { id: 121, name: 'Курс 3' },
-                    { id: 122, name: 'Курс 4' }
-                ],
-            },
-        ],
-    },
-    {
-        id: 2,
-        name: 'Учебное заведение 2',
-        groups: [
-            {
-                id: 21,
-                name: 'Группа C',
-                courses: [
-                    { id: 211, name: 'Курс 5' },
-                    { id: 212, name: 'Курс 6' }
-                ],
-            },
-        ],
-    },
-];
+import { getUserInstitution } from "../../features/users/users";
+import { createGroup, createGroupsBatch } from '../../features/group/groupSlice'; // Импортируем thunks для работы с группами
 
 const Menu = ({ setSelectedComponent }) => {
-    const [institutions, setInstitutions] = useState(mockData);
+    const [institutions, setInstitutions] = useState([]);
     const [expandedInstitutions, setExpandedInstitutions] = useState({});
-    const [expandedGroups, setExpandedGroups] = useState({});
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false); // Модалка для одной группы
+    const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false); // Модалка для нескольких групп
+    const [groupName, setGroupName] = useState(''); // Название группы (одна)
+    const [groupNames, setGroupNames] = useState(''); // Названия групп (несколько, через запятую)
+
     const [formData, setFormData] = useState({
         email: '',
         location: '',
         short_name: '',
         full_name: '',
         institution_type: 'SCHOOL',
+        access_token: localStorage.getItem('access_token'),
     });
+
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [fetchLoading, setFetchLoading] = useState(false); // Загрузка для fetch
-
-
-    // Состояние для работы с группами
-    const [isAddingGroup, setIsAddingGroup] = useState(false);
-    const [groupFormData, setGroupFormData] = useState({ name: '' });
-    const [groupError, setGroupError] = useState(null);
-    const [groupLoading, setGroupLoading] = useState(false);
-    const institutionId = mockData[0].id; // ID учебного заведения для API-запросов
+    const [fetchLoading, setFetchLoading] = useState(false);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    // Функция загрузки учреждений
+    // Загрузка учреждений
     const loadInstitutions = async () => {
         setFetchLoading(true);
         setError(null);
-
         try {
             console.log('[Menu] Начинаем загрузку учреждений...');
-            await dispatch(refreshAccessToken())
-            const resultAction = await dispatch(fetchInstitutions());
-
-
-            if (fetchInstitutions.fulfilled.match(resultAction)) {
-                console.log('[Menu] Учреждения загружены:', resultAction.payload);
-                setInstitutions(resultAction.payload);
-                alert('Учреждения успешно загружены!');
-            } else {
-                setError('Не удалось загрузить учреждения');
-                console.error('[Menu] Ошибка загрузки:', resultAction.error);
+            const userData = await dispatch(getUserInstitution()).unwrap();
+            console.log('[Menu] Данные пользователя:', userData);
+            const institutionId = userData.institution?.id;
+            console.log('[Menu] Извлечён institutionId:', institutionId);
+            if (!institutionId) {
+                throw new Error('institution.id не найден в данных пользователя');
             }
+            const resultAction = await dispatch(fetchInstitutions(institutionId)).unwrap();
+            console.log('[Menu] Учреждения загружены:', resultAction);
+            setInstitutions([resultAction]);
         } catch (err) {
-            setError('Произошла ошибка сети при загрузке учреждений');
-            console.error('[Menu] Сетевая ошибка:', err);
+            setError(err.message || 'Произошла ошибка при загрузке учреждений');
+            console.error('[Menu] Ошибка загрузки:', err);
         } finally {
             setFetchLoading(false);
         }
     };
 
     const toggleInstitution = (id) => {
-        setExpandedInstitutions((prev) => ({
+        setExpandedInstitutions(prev => ({
             ...prev,
             [id]: !prev[id],
         }));
     };
 
-    const toggleGroup = (id) => {
-        setExpandedGroups((prev) => ({
-            ...prev,
-            [id]: !prev[id],
-        }));
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
-    };
-
+    // Создание учреждения
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
-
         try {
             const resultAction = await dispatch(createInstitution(formData));
-
             if (createInstitution.fulfilled.match(resultAction)) {
                 alert('Учебное заведение успешно создано!');
                 setIsModalOpen(false);
@@ -168,36 +110,82 @@ const Menu = ({ setSelectedComponent }) => {
         }
     };
 
-    // Добавление группы (POST /groups)
-    const handleAddGroup = async (e) => {
-        e.preventDefault();
-        setGroupLoading(true);
-        setGroupError(null);
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
 
+    // Эффект загрузки
+    useEffect(() => {
+        loadInstitutions();
+        const intervalId = setInterval(loadInstitutions, 60000);
+        return () => clearInterval(intervalId);
+    }, []);
+
+    // Обработчики для модалок групп
+    const openGroupModal = () => setIsGroupModalOpen(true);
+    const closeGroupModal = () => {
+        setIsGroupModalOpen(false);
+        setGroupName('');
+    };
+
+    const openGroupsModal = () => setIsGroupsModalOpen(true);
+    const closeGroupsModal = () => {
+        setIsGroupsModalOpen(false);
+        setGroupNames('');
+    };
+
+    // Добавление одной группы
+    const handleAddSingleGroup = async () => {
+        if (!groupName) {
+            alert('Введите название группы');
+            return;
+        }
         try {
-            const newGroup = await addGroup(institutionId, groupFormData);
-            mockData[0].groups.push(newGroup);
-            setIsAddingGroup(false);
-            setGroupFormData({ name: '' });
-            alert('Группа успешно добавлена!');
+            setIsLoading(true);
+            const institutionId = institutions[0]?.id; // Берем ID учреждения из списка
+            if (!institutionId) {
+                throw new Error('Не найден ID учреждения');
+            }
+            await dispatch(createGroup(institutionId, { name: groupName }));
+            alert(`Группа "${groupName}" добавлена!`);
+            closeGroupModal();
         } catch (error) {
-            setGroupError(error.message || 'Ошибка при добавлении группы');
+            console.error('Ошибка при добавлении группы:', error);
+            alert('Произошла ошибка при добавлении группы');
         } finally {
-            setGroupLoading(false);
+            setIsLoading(false);
         }
     };
 
-    // Удаление группы (DELETE /groups/{id})
-    const handleDeleteGroup = async (groupId) => {
-        setGroupLoading(true);
+    // Добавление нескольких групп
+    const handleAddMultipleGroups = async () => {
+        if (!groupNames) {
+            alert('Введите названия групп через запятую');
+            return;
+        }
+        const namesArray = groupNames.split(',').map(name => name.trim()).filter(name => name);
+        if (namesArray.length === 0) {
+            alert('Нет валидных названий групп');
+            return;
+        }
         try {
-            await deleteGroup(groupId);
-            mockData[0].groups = mockData[0].groups.filter(group => group.id !== groupId);
-            alert('Группа удалена!');
+            setIsLoading(true);
+            const institutionId = institutions[0]?.id; // Берем ID учреждения из списка
+            if (!institutionId) {
+                throw new Error('Не найден ID учреждения');
+            }
+            await dispatch(createGroupsBatch(institutionId, namesArray));
+            alert(`Добавлены группы: ${namesArray.join(', ')}`);
+            closeGroupsModal();
         } catch (error) {
-            setGroupError(error.message || 'Ошибка при удалении группы');
+            console.error('Ошибка при массовом добавлении групп:', error);
+            alert('Произошла ошибка при добавлении групп');
         } finally {
-            setGroupLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -205,79 +193,59 @@ const Menu = ({ setSelectedComponent }) => {
         <div className={styles.menu}>
             {/* Заголовок */}
             <div className={styles.header}>
-        <span
-            className={styles.title}
-            onClick={() => navigate('/')}
-        >
+        <span className={styles.title} onClick={() => navigate('/')}>
           <Button startIcon={<HomeOutlined />} size="small">
             Главная страница
           </Button>
         </span>
             </div>
 
-            {/* Кнопка для загрузки учреждений */}
-            <Box mt={2} ml={1} mb={2}>
-                <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={fetchLoading ? <CircularProgress size={20} /> : <RefreshIcon />}
-                    onClick={loadInstitutions}
-                    disabled={fetchLoading}
-                >
-                    {fetchLoading ? 'Загружается...' : 'Обновить учреждения'}
-                </Button>
-            </Box>
-
             {/* Список учреждений */}
-            {institutions.map((inst) => (
-                <div key={inst.id}>
+            {institutions.map(inst => (
+                <div key={inst.id} className={styles.institutionRow}>
                     <div
                         className={styles.item}
-                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        style={{
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            flexGrow: 1
+                        }}
                         onClick={() => toggleInstitution(inst.id)}
                     >
+                        <SchoolIcon fontSize="small" color="primary" />
                         {expandedInstitutions[inst.id] ? <ArrowDropUp /> : <ArrowDropDown />}
-                        <Typography variant="body1">{inst.name}</Typography>
+                        <Typography variant="body1">
+                            {inst.short_name || inst.name || 'Название не указано'}
+                        </Typography>
                     </div>
 
-                    {expandedInstitutions[inst.id] &&
-                        inst.groups.map((group) => (
-                            <div key={group.id} style={{ paddingLeft: '32px' }}>
-                                <div
-                                    className={styles.item}
-                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                    onClick={() => toggleGroup(group.id)}
-                                >
-                                    {expandedGroups[group.id] ? <ArrowDropUp /> : <ArrowDropDown />}
-                                    <Typography variant="body2">{group.name}</Typography>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        size="small"
-                                        onClick={() => handleDeleteGroup(group.id)}
-                                        disabled={groupLoading}
-                                    >
-                                        Удалить
-                                    </Button>
-                                </div>
+                    {/* Кнопки управления группами */}
+                    <Box display="flex" gap={1} ml={1}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<GroupAddIcon fontSize="small" />}
+                            onClick={openGroupModal}
+                        >
+                            Группа
+                        </Button>
 
-                                {expandedGroups[group.id] &&
-                                    group.courses.map((course) => (
-                                        <div
-                                            key={course.id}
-                                            className={styles.item}
-                                            style={{ paddingLeft: '48px', cursor: 'pointer' }}
-                                            onClick={() => setSelectedComponent(course.name)}
-                                        >
-                                            <Typography variant="body2">{course.name}</Typography>
-                                        </div>
-                                    ))}
-                            </div>
-                        ))}
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            startIcon={<AddIcon fontSize="small" />}
+                            onClick={openGroupsModal}
+                        >
+                            Группы
+                        </Button>
+                    </Box>
                 </div>
             ))}
 
-            {/* Кнопка открытия модального окна для заведения */}
+            {/* Кнопка "Добавить учебное заведение" */}
             <Box mt={2} ml={1}>
                 <Button
                     variant="contained"
@@ -289,7 +257,7 @@ const Menu = ({ setSelectedComponent }) => {
                 </Button>
             </Box>
 
-            {/* Модальное окно для заведения */}
+            {/* Модалка создания учреждения */}
             <MuiModal
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -370,14 +338,11 @@ const Menu = ({ setSelectedComponent }) => {
                             value={formData.institution_type}
                             onChange={handleInputChange}
                             name="institution_type"
-                            displayEmpty
-                            margin="normal"
                             size="small"
                         >
                             <MenuItem value="SCHOOL">Школа</MenuItem>
                             <MenuItem value="COLLEGE">Колледж</MenuItem>
-                            <MenuItem value="UNIVERSITY">Университет</MenuItem>
-                            <MenuItem value="OTHER">Другое</MenuItem>
+                            <MenuItem value="HIGHER_EDUCATION">Университет</MenuItem>
                         </Select>
 
                         <Box mt={3} display="flex" gap={2}>
@@ -402,22 +367,10 @@ const Menu = ({ setSelectedComponent }) => {
                 </Box>
             </MuiModal>
 
-            {/* Кнопка добавления группы */}
-            <Box mt={2} ml={1}>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => setIsAddingGroup(true)}
-                >
-                    Добавить группу
-                </Button>
-            </Box>
-
-            {/* Модальное окно для добавления группы */}
+            {/* Модальное окно для добавления одной группы */}
             <MuiModal
-                open={isAddingGroup}
-                onClose={() => setIsAddingGroup(false)}
+                open={isGroupModalOpen}
+                onClose={closeGroupModal}
                 BackdropComponent={Backdrop}
                 BackdropProps={{ timeout: 500 }}
             >
@@ -427,7 +380,7 @@ const Menu = ({ setSelectedComponent }) => {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: 300,
+                        width: 350,
                         bgcolor: 'background.paper',
                         borderRadius: 2,
                         boxShadow: 24,
@@ -435,46 +388,91 @@ const Menu = ({ setSelectedComponent }) => {
                     }}
                 >
                     <Typography variant="h6" mb={2}>
-                        Создать группу
+                        Добавить группу
                     </Typography>
 
-                    {groupError && (
-                        <Typography color="error" variant="body2" mb={2}>
-                            {groupError}
-                        </Typography>
-                    )}
+                    <TextField
+                        fullWidth
+                        label="Название группы"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        margin="normal"
+                        size="small"
+                    />
 
-                    <form onSubmit={handleAddGroup}>
-                        <TextField
-                            fullWidth
-                            label="Название группы"
-                            name="name"
-                            value={groupFormData.name}
-                            onChange={(e) => setGroupFormData({ name: e.target.value })}
-                            required
-                            margin="normal"
-                            size="small"
-                        />
+                    <Box mt={3} display="flex" gap={2}>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleAddSingleGroup}
+                            disabled={isLoading}
+                            startIcon={isLoading ? <CircularProgress size={20} /> : null}
+                        >
+                            {isLoading ? 'Добавляется...' : 'Добавить'}
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={closeGroupModal}
+                        >
+                            Отмена
+                        </Button>
+                    </Box>
+                </Box>
+            </MuiModal>
 
-                        <Box mt={3} display="flex" gap={2}>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                color="primary"
-                                disabled={groupLoading}
-                                startIcon={groupLoading ? <CircularProgress size={20} /> : null}
-                            >
-                                {groupLoading ? 'Создаётся...' : 'Создать'}
-                            </Button>
+            {/* Модальное окно для добавления нескольких групп */}
+            <MuiModal
+                open={isGroupsModalOpen}
+                onClose={closeGroupsModal}
+                BackdropComponent={Backdrop}
+                BackdropProps={{ timeout: 500 }}
+            >
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 350,
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 4,
+                    }}
+                >
+                    <Typography variant="h6" mb={2}>
+                        Добавить группы
+                    </Typography>
 
-                            <Button
-                                variant="outlined"
-                                onClick={() => setIsAddingGroup(false)}
-                            >
-                                Отмена
-                            </Button>
-                        </Box>
-                    </form>
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        label="Названия групп (через запятую)"
+                        value={groupNames}
+                        onChange={(e) => setGroupNames(e.target.value)}
+                        margin="normal"
+                        size="small"
+                        helperText="Введите названия групп, разделяя их запятыми"
+                    />
+
+                    <Box mt={3} display="flex" gap={2}>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleAddMultipleGroups}
+                            disabled={isLoading}
+                            startIcon={isLoading ? <CircularProgress size={20} /> : null}
+                        >
+                            {isLoading ? 'Добавляются...' : 'Добавить'}
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={closeGroupsModal}
+                        >
+                            Отмена
+                        </Button>
+                    </Box>
                 </Box>
             </MuiModal>
         </div>

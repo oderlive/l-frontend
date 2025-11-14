@@ -1,27 +1,29 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getUserInstitution } from './users'; // импортируем функцию из users.js
+import { getUserInstitution } from './users';
 
 // Асинхронное действие для получения учреждения пользователя
+// Теперь не требует передачи userId — функция сама его получит
 export const fetchUserInstitution = createAsyncThunk(
     'users/fetchUserInstitution',
-    async (userId, { rejectWithValue }) => {
+    async (_, { rejectWithValue }) => { // _ — пустой аргумент, т.к. ID берётся изнутри
         try {
-            const institution = await getUserInstitution(userId);
+            const institution = await getUserInstitution();
+            console.log('Данные об учреждении получены:', institution);
             return institution;
         } catch (error) {
             return rejectWithValue(error.message);
         }
-    },
+    }
 );
 
 // Инициализация начального состояния
 const initialState = {
-    institution: null,    // данные об учреждении
-    loading: false,       // флаг загрузки
-    error: null,          // сообщение об ошибке
+    institution: null,
+    loading: false,
+    error: null,
 };
 
-// Создание slice с помощью createSlice
+// Создание slice
 const usersSlice = createSlice({
     name: 'users',
     initialState,
@@ -43,5 +45,4 @@ const usersSlice = createSlice({
     },
 });
 
-export const { } = usersSlice.actions;
 export default usersSlice.reducer;

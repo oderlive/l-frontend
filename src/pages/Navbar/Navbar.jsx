@@ -36,7 +36,7 @@ const Navbar = () => {
     useEffect(() => {
         const currentUserId = localStorage.getItem('user_id');
         setUserId(currentUserId);
-    }, []);
+    }, [localStorage.getItem('user_id')]);
 
     return (
         <>

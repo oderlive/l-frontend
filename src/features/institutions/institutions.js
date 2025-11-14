@@ -4,24 +4,50 @@ import { ENDPOINTS } from '../api/endpoints';
 
 // Получение списка учебных заведений
 export const fetchInstitutions = createAsyncThunk(
-    '/institutions',
-    async (_, { rejectWithValue }) => {
+    'institutions/fetchInstitutions',
+    async (institutionId, { rejectWithValue }) => {
         try {
-            const response = await axios.get(ENDPOINTS.INSTITUTIONS);
-            console.log(response.data)
+            console.log('[fetchInstitutions] Получен institutionId:', institutionId);
+            const accessToken = localStorage.getItem('access_token');
+            const response = await axios.get(`${ENDPOINTS.INSTITUTIONS}`, {
+                params: { institution_id: institutionId },
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            console.log('[fetchInstitutions] Ответ от API:', response.data);
             return response.data;
         } catch (error) {
+            console.error('[fetchInstitutions] Ошибка запроса:', error);
             return rejectWithValue(error.response?.data || error.message);
         }
     }
 );
 
-// Создание нового учебного заведения
 export const createInstitution = createAsyncThunk(
     '/institutions',
     async (institutionData, { rejectWithValue }) => {
         try {
-            const response = await axios.post(ENDPOINTS.INSTITUTIONS, institutionData);
+            // Получаем токен из localStorage
+            const accessToken = localStorage.getItem('access_token');
+
+            // Проверяем, что токен существует
+            if (!accessToken) {
+                return rejectWithValue('Access token not found');
+            }
+
+            // Отправляем запрос с заголовком Authorization
+            const response = await axios.post(
+                ENDPOINTS.INSTITUTIONS,
+                institutionData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            );
+
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response?.data || error.message);
