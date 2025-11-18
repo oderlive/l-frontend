@@ -1,0 +1,50 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.title {
+    text-align: center;
+    margin-bottom: 32px;
+    color: #1976d2;
+}
+
+.coursesList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.courseCard {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.courseCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+
+    .coursesList {
+        grid-template-columns: 1fr;
+    }
+}

@@ -26,8 +26,18 @@ const Tile = ({ course, teacher, imageUrl }) => {
         setIsModalOpen((prev) => !prev); // Инвертируем состояние: true ↔ false
     };
 
+    // Новый обработчик для клика по плитке
+    const handleTileClick = () => {
+        navigate('/course'); // Переход на страницу курса
+    };
+
     return (
-        <div className={styles.tile}>
+        <div
+            className={styles.tile}
+            onClick={handleTileClick} // Добавляем обработчик клика к плитке
+            role="button" // Указываем, что элемент интерактивен
+            tabIndex={0} // Делаем плитку фокусируемой
+        >
             <div className={styles.header}>
                 <h2 className={styles.course}>{course}</h2>
             </div>
@@ -43,7 +53,12 @@ const Tile = ({ course, teacher, imageUrl }) => {
                     <img src={tileProfile} alt="Профиль" className={styles.icon} />
                 </button>
                 <button className={styles.actionButton}>
-                    <img src={tileFolder} alt="Файлы" className={styles.icon} onClick={() => navigate('/file-course')} />
+                    <img
+                        src={tileFolder}
+                        alt="Файлы"
+                        className={styles.icon}
+                        onClick={() => navigate('/file-course')}
+                    />
                 </button>
                 <button
                     ref={menuButtonRef}
@@ -73,7 +88,6 @@ const Tile = ({ course, teacher, imageUrl }) => {
                     </button>
                 </div>
             )}
-
         </div>
     );
 };

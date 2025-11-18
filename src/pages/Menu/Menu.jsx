@@ -25,7 +25,7 @@ import styles from './Menu.module.css';
 import { useNavigate } from 'react-router-dom';
 import { createInstitution, fetchInstitutions } from '../../features/institutions/institutions';
 import { getUserInstitution } from "../../features/users/users";
-import { createGroup, createGroupsBatch } from '../../features/group/groupSlice'; // Импортируем thunks для работы с группами
+import { createGroup, createGroupsBatch } from '../../features/group/groupSlice';
 
 const Menu = ({ setSelectedComponent }) => {
     const [institutions, setInstitutions] = useState([]);
