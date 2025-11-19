@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../auth/authSlice.js';
-import groupReducer from '../group/groupSlice.js';
+import groupReducer from '../group/groupsSlice.js';
 import institutionsReducer from '../institutions/institutionsSlice.js';
 
 // Функция для загрузки начального состояния из localStorage

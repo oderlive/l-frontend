@@ -1,5 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { addGroup, addGroupsBatch, getGroupsByInstitution, deleteGroup } from './group'; // импорт функций из group.js
+import {
+    addGroup,
+    addGroupsBatch,
+    getGroupsByInstitution,
+    deleteGroup
+} from './groups';
 
 const initialState = {
     groups: [],
@@ -7,7 +12,7 @@ const initialState = {
     error: null,
 };
 
-const groupSlice = createSlice({
+const groupsSlice = createSlice({
     name: 'groups',
     initialState,
     reducers: {
@@ -27,7 +32,7 @@ const groupSlice = createSlice({
             state.error = null;
         },
         deleteGroupSuccess(state, action) {
-            state.groups = state.groups.filter(group => group.id !== action.payload);
+            state.groups = state.groups.filter(g => g.id !== action.payload);
             state.loading = false;
             state.error = null;
         },
@@ -41,12 +46,20 @@ const groupSlice = createSlice({
     },
 });
 
-// Асинхронные действия (thunks)
+// ---- THUNKS ----
+
 export const fetchGroupsByInstitution = (institutionId) => async (dispatch) => {
     dispatch(setLoading());
     try {
         const groups = await getGroupsByInstitution(institutionId);
-        dispatch(setGroups(groups));
+
+        // 🔥 ДОБАВЛЕНИЕ ПОЛЯ institution_id
+        const fixedGroups = groups.map(g => ({
+            ...g,
+            institution_id: institutionId,
+        }));
+
+        dispatch(setGroups(fixedGroups));
     } catch (error) {
         dispatch(setError(error.message));
     }
@@ -56,7 +69,11 @@ export const createGroup = (institutionId, groupData) => async (dispatch) => {
     dispatch(setLoading());
     try {
         const newGroup = await addGroup(institutionId, groupData);
-        dispatch(addGroupSuccess(newGroup));
+
+        dispatch(addGroupSuccess({
+            ...newGroup,
+            institution_id: institutionId,
+        }));
     } catch (error) {
         dispatch(setError(error.message));
     }
@@ -66,7 +83,13 @@ export const createGroupsBatch = (institutionId, groupsData) => async (dispatch)
     dispatch(setLoading());
     try {
         const newGroups = await addGroupsBatch(institutionId, groupsData);
-        dispatch(addGroupsBatchSuccess(newGroups));
+
+        dispatch(addGroupsBatchSuccess(
+            newGroups.map(g => ({
+                ...g,
+                institution_id: institutionId,
+            }))
+        ));
     } catch (error) {
         dispatch(setError(error.message));
     }
@@ -82,5 +105,13 @@ export const removeGroup = (groupId) => async (dispatch) => {
     }
 };
 
-export default groupSlice.reducer;
-export const { setGroups, addGroupSuccess, addGroupsBatchSuccess, deleteGroupSuccess, setLoading, setError } = groupSlice.actions;
+export default groupsSlice.reducer;
+
+export const {
+    setGroups,
+    addGroupSuccess,
+    addGroupsBatchSuccess,
+    deleteGroupSuccess,
+    setLoading,
+    setError
+} = groupsSlice.actions;

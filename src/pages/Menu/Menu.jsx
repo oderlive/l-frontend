@@ -24,12 +24,13 @@ import {
 import styles from './Menu.module.css';
 import { useNavigate } from 'react-router-dom';
 import { createInstitution, fetchInstitutions } from '../../features/institutions/institutions';
-import { getUserInstitution } from "../../features/users/users";
-import { createGroup, createGroupsBatch } from '../../features/group/groupSlice';
+import { getUserInstitution } from '../../features/users/users';
+import { createGroup, createGroupsBatch, fetchGroupsByInstitution } from '../../features/group/groupsSlice';
 
 const Menu = ({ setSelectedComponent }) => {
     const [institutions, setInstitutions] = useState([]);
     const [expandedInstitutions, setExpandedInstitutions] = useState({});
+    const [allGroups, setAllGroups] = useState([]); // Все группы пользователя
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false); // Модалка для одной группы
     const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false); // Модалка для нескольких групп
@@ -58,21 +59,67 @@ const Menu = ({ setSelectedComponent }) => {
         setError(null);
         try {
             console.log('[Menu] Начинаем загрузку учреждений...');
-            const userData = await dispatch(getUserInstitution()).unwrap();
+            const userAction = await dispatch(getUserInstitution());
+
+            if (userAction.meta?.requestStatus !== 'fulfilled') {
+                throw new Error(userAction.error?.message || 'Не удалось загрузить данные пользователя');
+            }
+
+            const userData = userAction.payload;
             console.log('[Menu] Данные пользователя:', userData);
+
             const institutionId = userData.institution?.id;
             console.log('[Menu] Извлечён institutionId:', institutionId);
+
             if (!institutionId) {
                 throw new Error('institution.id не найден в данных пользователя');
             }
-            const resultAction = await dispatch(fetchInstitutions(institutionId)).unwrap();
+
+            const institutionsAction = await dispatch(fetchInstitutions(institutionId));
+
+            if (institutionsAction.meta?.requestStatus !== 'fulfilled') {
+                throw new Error(institutionsAction.error?.message || 'Не удалось загрузить учреждения');
+            }
+
+            const resultAction = institutionsAction.payload;
             console.log('[Menu] Учреждения загружены:', resultAction);
             setInstitutions([resultAction]);
+
+
+            await loadGroupsForInstitutions([resultAction]);
         } catch (err) {
             setError(err.message || 'Произошла ошибка при загрузке учреждений');
             console.error('[Menu] Ошибка загрузки:', err);
         } finally {
             setFetchLoading(false);
+        }
+    };
+
+
+    // Загрузка всех групп пользователя
+    const loadGroupsForInstitutions = async (institutionsList) => {
+        try {
+            const institutionIds = institutionsList.map(inst => inst.id);
+            const groupsPromises = institutionIds.map(id =>
+                dispatch(fetchGroupsByInstitution(id))
+            );
+
+            const groupsActions = await Promise.all(groupsPromises);
+
+            // Фильтруем только валидные действия с meta
+            const allGroupsFlattened = groupsActions
+                .filter(action =>
+                    action && // Проверяем, что action существует
+                    action.meta && // Проверяем наличие meta
+                    action.meta.requestStatus === 'fulfilled'
+                )
+                .map(action => action.payload)
+                .flat();
+
+            setAllGroups(allGroupsFlattened);
+        } catch (err) {
+            console.error('[Menu] Ошибка загрузки групп:', err);
+            setAllGroups([]);
         }
     };
 
@@ -91,7 +138,6 @@ const Menu = ({ setSelectedComponent }) => {
         try {
             const resultAction = await dispatch(createInstitution(formData));
             if (createInstitution.fulfilled.match(resultAction)) {
-                alert('Учебное заведение успешно создано!');
                 setIsModalOpen(false);
                 setFormData({
                     email: '',
@@ -100,6 +146,8 @@ const Menu = ({ setSelectedComponent }) => {
                     full_name: '',
                     institution_type: 'SCHOOL',
                 });
+                // Перезагружаем учреждения и группы после создания
+                await loadInstitutions();
             } else {
                 setError(resultAction.error.message || 'Ошибка при создании');
             }
@@ -146,12 +194,18 @@ const Menu = ({ setSelectedComponent }) => {
         }
         try {
             setIsLoading(true);
-            const institutionId = institutions[0]?.id; // Берем ID учреждения из списка
+            const institutionId = institutions[0]?.id;
             if (!institutionId) {
                 throw new Error('Не найден ID учреждения');
             }
-            await dispatch(createGroup(institutionId, { name: groupName }));
-            alert(`Группа "${groupName}" добавлена!`);
+
+            const action = await dispatch(createGroup(institutionId, { name: groupName }));
+
+            if (action.meta?.requestStatus !== 'fulfilled') {
+                throw new Error(action.error?.message || 'Ошибка при создании группы');
+            }
+
+            await loadGroupsForInstitutions(institutions);
             closeGroupModal();
         } catch (error) {
             console.error('Ошибка при добавлении группы:', error);
@@ -174,12 +228,18 @@ const Menu = ({ setSelectedComponent }) => {
         }
         try {
             setIsLoading(true);
-            const institutionId = institutions[0]?.id; // Берем ID учреждения из списка
+            const institutionId = institutions[0]?.id;
             if (!institutionId) {
                 throw new Error('Не найден ID учреждения');
             }
-            await dispatch(createGroupsBatch(institutionId, namesArray));
-            alert(`Добавлены группы: ${namesArray.join(', ')}`);
+
+            const action = await dispatch(createGroupsBatch(institutionId, namesArray));
+
+            if (action.meta?.requestStatus !== 'fulfilled') {
+                throw new Error(action.error?.message || 'Ошибка при массовом создании групп');
+            }
+
+            await loadGroupsForInstitutions(institutions);
             closeGroupsModal();
         } catch (error) {
             console.error('Ошибка при массовом добавлении групп:', error);
@@ -243,6 +303,33 @@ const Menu = ({ setSelectedComponent }) => {
                         </Button>
                     </Box>
                 </div>
+            ))}
+
+            {/* Блок с группами для развёрнутого учреждения */}
+            {institutions.map(inst => (
+                expandedInstitutions[inst.id] && (
+                    <div key={`groups-${inst.id}`} className={styles.groupsList}>
+                        <Typography variant="subtitle2" color="textSecondary" ml={3} mb={1}>
+                            Группы:
+                        </Typography>
+                        {/* Фильтруем группы по institution.id */}
+                        {allGroups
+                            .filter(group => group.institution.id === inst.id)
+                            .map(group => (
+                                <div key={group.id} className={styles.groupItem}>
+                                    <Typography variant="body2" ml={3}>
+                                        {group.name || 'Без названия'}
+                                    </Typography>
+                                </div>
+                            ))}
+                        {/* Если нет групп для этого учреждения */}
+                        {allGroups.filter(group => group.institution.id === inst.id).length === 0 && (
+                            <Typography variant="body2" color="textSecondary" ml={3}>
+                                Нет групп
+                            </Typography>
+                        )}
+                    </div>
+                )
             ))}
 
             {/* Кнопка "Добавить учебное заведение" */}
