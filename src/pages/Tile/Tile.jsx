@@ -34,11 +34,10 @@ const Tile = ({ course, teacher, imageUrl }) => {
     return (
         <div
             className={styles.tile}
-            onClick={handleTileClick} // Добавляем обработчик клика к плитке
             role="button" // Указываем, что элемент интерактивен
             tabIndex={0} // Делаем плитку фокусируемой
         >
-            <div className={styles.header}>
+            <div className={styles.header} onClick={handleTileClick}>
                 <h2 className={styles.course}>{course}</h2>
             </div>
             <div className={styles.content}>
