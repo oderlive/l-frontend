@@ -53,17 +53,32 @@ export const fetchGroupsByInstitution = (institutionId) => async (dispatch) => {
     try {
         const groups = await getGroupsByInstitution(institutionId);
 
-        // 🔥 ДОБАВЛЕНИЕ ПОЛЯ institution_id
+        // Добавляем institution_id к каждой группе
         const fixedGroups = groups.map(g => ({
             ...g,
             institution_id: institutionId,
         }));
 
+        // Отправляем данные в store
         dispatch(setGroups(fixedGroups));
+
+        // возвращаем результат для await dispatch()
+        return {
+            meta: { requestStatus: 'fulfilled' },
+            payload: fixedGroups,
+        };
     } catch (error) {
         dispatch(setError(error.message));
+
+        // Возвращаем ошибку для await dispatch()
+        return {
+            meta: { requestStatus: 'rejected' },
+            error: error.message,
+            payload: [],
+        };
     }
 };
+
 
 export const createGroup = (institutionId, groupData) => async (dispatch) => {
     dispatch(setLoading());

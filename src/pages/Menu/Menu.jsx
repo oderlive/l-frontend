@@ -98,30 +98,27 @@ const Menu = ({ setSelectedComponent }) => {
 
     // Загрузка всех групп пользователя
     const loadGroupsForInstitutions = async (institutionsList) => {
-        try {
-            const institutionIds = institutionsList.map(inst => inst.id);
-            const groupsPromises = institutionIds.map(id =>
-                dispatch(fetchGroupsByInstitution(id))
-            );
+        const validInstitutions = institutionsList.filter(inst => inst.id);
+        console.log(validInstitutions)
+        const allGroups = [];
 
-            const groupsActions = await Promise.all(groupsPromises);
+        for (const inst of validInstitutions) {
+            try {
+                const result = await dispatch(fetchGroupsByInstitution(inst.id));
+                console.log(result)
 
-            // Фильтруем только валидные действия с meta
-            const allGroupsFlattened = groupsActions
-                .filter(action =>
-                    action && // Проверяем, что action существует
-                    action.meta && // Проверяем наличие meta
-                    action.meta.requestStatus === 'fulfilled'
-                )
-                .map(action => action.payload)
-                .flat();
-
-            setAllGroups(allGroupsFlattened);
-        } catch (err) {
-            console.error('[Menu] Ошибка загрузки групп:', err);
-            setAllGroups([]);
+                if (result.meta?.requestStatus === 'fulfilled' && Array.isArray(result.payload)) {
+                    allGroups.push(...result.payload);
+                }
+            } catch (err) {
+                console.error(`Ошибка загрузки групп для ${inst.id}:`, err);
+                // Продолжаем обработку остальных учреждений, не прерываем цикл
+            }
         }
+
+        setAllGroups(allGroups);
     };
+
 
     const toggleInstitution = (id) => {
         setExpandedInstitutions(prev => ({
@@ -306,31 +303,59 @@ const Menu = ({ setSelectedComponent }) => {
             ))}
 
             {/* Блок с группами для развёрнутого учреждения */}
-            {institutions.map(inst => (
-                expandedInstitutions[inst.id] && (
-                    <div key={`groups-${inst.id}`} className={styles.groupsList}>
-                        <Typography variant="subtitle2" color="textSecondary" ml={3} mb={1}>
-                            Группы:
-                        </Typography>
-                        {/* Фильтруем группы по institution.id */}
-                        {allGroups
-                            .filter(group => group.institution.id === inst.id)
-                            .map(group => (
-                                <div key={group.id} className={styles.groupItem}>
-                                    <Typography variant="body2" ml={3}>
-                                        {group.name || 'Без названия'}
-                                    </Typography>
-                                </div>
-                            ))}
-                        {/* Если нет групп для этого учреждения */}
-                        {allGroups.filter(group => group.institution.id === inst.id).length === 0 && (
-                            <Typography variant="body2" color="textSecondary" ml={3}>
-                                Нет групп
+            {institutions.map(inst => {
+                console.log('[Menu] Обрабатываем учреждение:', {
+                    id: inst.id,
+                    short_name: inst.short_name,
+                    full_name: inst.full_name,
+                    isExpanded: expandedInstitutions[inst.id]
+                });
+
+                const isExpanded = expandedInstitutions[inst.id];
+                console.log(allGroups)
+
+                const groupsForInstitution = allGroups
+                    .filter(group =>
+                        group.institution &&
+                        group.institution.id === inst.id
+                    );
+                console.log('[Menu] Группы для учреждения', inst.id, ':', {
+                    totalCount: groupsForInstitution.length,
+                    groups: groupsForInstitution.map(g => ({ id: g.id, name: g.name }))
+                });
+
+                return (
+                    isExpanded && (
+                        <div key={`groups-${inst.id}`} className={styles.groupsList}>
+                            <Typography variant="subtitle2" color="textSecondary" ml={3} mb={1}>
+                                Группы:
                             </Typography>
-                        )}
-                    </div>
-                )
-            ))}
+                            {/* Фильтруем группы по institution.id */}
+                            {groupsForInstitution.map(group => {
+                                console.log('[Menu] Отображаем группу:', {
+                                    id: group.id,
+                                    name: group.name,
+                                    institutionId: group.institution.id
+                                });
+                                return (
+                                    <div key={group.id} className={styles.groupItem}>
+                                        <Typography variant="body2" ml={3}>
+                                            {group.name || 'Без названия'}
+                                        </Typography>
+                                    </div>
+                                );
+                            })}
+                            {/* Если нет групп для этого учреждения */}
+                            {groupsForInstitution.length === 0 && (
+                                <Typography variant="body2" color="textSecondary" ml={3}>
+                                    Нет групп
+                                </Typography>
+                            )}
+                        </div>
+                    )
+                );
+            })}
+
 
             {/* Кнопка "Добавить учебное заведение" */}
             <Box mt={2} ml={1}>
