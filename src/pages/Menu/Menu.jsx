@@ -18,14 +18,22 @@ import {
     Add as AddIcon,
     Refresh as RefreshIcon,
     School as SchoolIcon,
-    GroupAdd as GroupAddIcon
+    GroupAdd as GroupAddIcon,
+    Groups as GroupsIcon  // Добавлена иконка групп
 } from '@mui/icons-material';
 
 import styles from './Menu.module.css';
 import { useNavigate } from 'react-router-dom';
-import { createInstitution, fetchInstitutions } from '../../features/institutions/institutions';
+import {
+    createInstitution,
+    fetchInstitutions
+} from '../../features/institutions/institutions';
 import { getUserInstitution } from '../../features/users/users';
-import { createGroup, createGroupsBatch, fetchGroupsByInstitution } from '../../features/group/groupsSlice';
+import {
+    createGroup,
+    createGroupsBatch,
+    fetchGroupsByInstitution
+} from '../../features/group/groupsSlice';
 
 const Menu = ({ setSelectedComponent }) => {
     const [institutions, setInstitutions] = useState([]);
@@ -85,7 +93,6 @@ const Menu = ({ setSelectedComponent }) => {
             console.log('[Menu] Учреждения загружены:', resultAction);
             setInstitutions([resultAction]);
 
-
             await loadGroupsForInstitutions([resultAction]);
         } catch (err) {
             setError(err.message || 'Произошла ошибка при загрузке учреждений');
@@ -95,17 +102,16 @@ const Menu = ({ setSelectedComponent }) => {
         }
     };
 
-
     // Загрузка всех групп пользователя
     const loadGroupsForInstitutions = async (institutionsList) => {
         const validInstitutions = institutionsList.filter(inst => inst.id);
-        console.log(validInstitutions)
+        console.log(validInstitutions);
         const allGroups = [];
 
         for (const inst of validInstitutions) {
             try {
                 const result = await dispatch(fetchGroupsByInstitution(inst.id));
-                console.log(result)
+                console.log(result);
 
                 if (result.meta?.requestStatus === 'fulfilled' && Array.isArray(result.payload)) {
                     allGroups.push(...result.payload);
@@ -118,7 +124,6 @@ const Menu = ({ setSelectedComponent }) => {
 
         setAllGroups(allGroups);
     };
-
 
     const toggleInstitution = (id) => {
         setExpandedInstitutions(prev => ({
@@ -312,7 +317,7 @@ const Menu = ({ setSelectedComponent }) => {
                 });
 
                 const isExpanded = expandedInstitutions[inst.id];
-                console.log(allGroups)
+                console.log(allGroups);
 
                 const groupsForInstitution = allGroups
                     .filter(group =>
@@ -330,32 +335,33 @@ const Menu = ({ setSelectedComponent }) => {
                             <Typography variant="subtitle2" color="textSecondary" ml={3} mb={1}>
                                 Группы:
                             </Typography>
-                            {/* Фильтруем группы по institution.id */}
-                            {groupsForInstitution.map(group => {
-                                console.log('[Menu] Отображаем группу:', {
-                                    id: group.id,
-                                    name: group.name,
-                                    institutionId: group.institution.id
-                                });
-                                return (
-                                    <div key={group.id} className={styles.groupItem}>
-                                        <Typography variant="body2" ml={3}>
-                                            {group.name || 'Без названия'}
-                                        </Typography>
-                                    </div>
-                                );
-                            })}
-                            {/* Если нет групп для этого учреждения */}
-                            {groupsForInstitution.length === 0 && (
-                                <Typography variant="body2" color="textSecondary" ml={3}>
-                                    Нет групп
-                                </Typography>
-                            )}
+                            <div className={styles.groupsContainer}>
+                                {groupsForInstitution.length > 0 ? (
+                                    groupsForInstitution.map(group => (
+                                        <div key={group.id} className={styles.groupItem}>
+                                            <GroupsIcon
+                                                fontSize="small"
+                                                sx={{ color: '#1976d2', mr: 1 }}
+                                            />
+                                            <Typography variant="body2" className={styles.groupName}>
+                                                {group.name || 'Без названия'}
+                                            </Typography>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <Typography
+                                        variant="body2"
+                                        color="textSecondary"
+                                        className={styles.noGroupsMessage}
+                                    >
+                                        Нет групп
+                                    </Typography>
+                                )}
+                            </div>
                         </div>
                     )
                 );
             })}
-
 
             {/* Кнопка "Добавить учебное заведение" */}
             <Box mt={2} ml={1}>
