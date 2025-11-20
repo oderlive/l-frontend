@@ -2,6 +2,19 @@ import axios from 'axios';
 import { ENDPOINTS } from '../api/endpoints';
 import { createAsyncThunk } from "@reduxjs/toolkit";
 
+const getAuthHeaders = () => {
+    const accessToken = localStorage.getItem('access_token');
+    if (!accessToken) {
+        throw new Error('Access token not found');
+    }
+    return {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    };
+};
+
 // Получение user_id из localStorage
 const getUserIdFromStorage = () => {
     const userId = localStorage.getItem('user_id');
@@ -22,7 +35,7 @@ export const getUserInstitution = createAsyncThunk(
                 return rejectWithValue('access_token не найден в localStorage');
             }
 
-            const url = `${ENDPOINTS.USERS}`;
+            const url = `${ENDPOINTS.USERS}/id`;
 
             const response = await axios.get(url, {
                 params: { user_id: userId },
@@ -37,6 +50,31 @@ export const getUserInstitution = createAsyncThunk(
 
         } catch (error) {
             console.error('Ошибка при запросе к API:', error);
+            return rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
+export const addUsersBatch = createAsyncThunk(
+    'users/addUsersBatch',
+    async (usersData, { rejectWithValue }) => {
+        try {
+            const accessToken = localStorage.getItem('access_token');
+            if (!accessToken) {
+                return rejectWithValue('access_token не найден в localStorage');
+            }
+            const config = { ...getAuthHeaders() };
+
+            const response = await axios.post(
+                `${ENDPOINTS.USERS}/batch`, // URL эндпоинта
+                usersData, // Массив объектов пользователей (request body)
+                config
+            );
+
+            console.log('Ответ от API (добавление пользователей):', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Ошибка при добавлении пользователей:', error);
             return rejectWithValue(error.response?.data || error.message);
         }
     }

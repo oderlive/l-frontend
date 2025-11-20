@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../auth/authSlice.js';
 import groupReducer from '../group/groupsSlice.js';
 import institutionsReducer from '../institutions/institutionsSlice.js';
+import courseReducer from '../course/courseSlice';
 
 // Функция для загрузки начального состояния из localStorage
 const loadState = () => {
@@ -35,6 +36,7 @@ const store = configureStore({
         auth: authReducer,
         groups: groupReducer,
         institution: institutionsReducer,
+        course: courseReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

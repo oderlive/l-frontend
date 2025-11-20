@@ -1,51 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import React, {useEffect, useState} from 'react';
+import {useDispatch} from 'react-redux';
 import {
-    Button,
-    TextField,
-    Select,
-    MenuItem,
-    Typography,
+    Backdrop,
     Box,
+    Button,
+    Checkbox,
     CircularProgress,
+    MenuItem,
     Modal as MuiModal,
-    Backdrop
+    Select,
+    TextField,
+    Typography
 } from '@mui/material';
 import {
-    HomeOutlined,
+    Add as AddIcon,
     ArrowDropDown,
     ArrowDropUp,
-    Add as AddIcon,
-    Refresh as RefreshIcon,
-    School as SchoolIcon,
+    Delete as DeleteIcon,
     GroupAdd as GroupAddIcon,
     Groups as GroupsIcon,
-    Delete as DeleteIcon  // Добавлена иконка удаления
+    HomeOutlined,
+    School as SchoolIcon
 } from '@mui/icons-material';
 
+
 import styles from './Menu.module.css';
-import { useNavigate } from 'react-router-dom';
-import {
-    createInstitution,
-    fetchInstitutions
-} from '../../features/institutions/institutions';
-import { getUserInstitution } from '../../features/users/users';
-import {
-    createGroup,
-    createGroupsBatch,
-    fetchGroupsByInstitution,
-    removeGroup  // Импортируем action для удаления группы
-} from '../../features/group/groupsSlice';
+import {useNavigate} from 'react-router-dom';
+import {createInstitution, fetchInstitutions} from '../../features/institutions/institutions';
+import {getUserInstitution} from '../../features/users/users';
+import {createGroup, createGroupsBatch, fetchGroupsByInstitution, removeGroup} from '../../features/group/groupsSlice';
+import {addCourseByGroupIds, getCoursesByUser} from '../../features/course/course';
+
 
 const Menu = ({ setSelectedComponent }) => {
     const [institutions, setInstitutions] = useState([]);
     const [expandedInstitutions, setExpandedInstitutions] = useState({});
-    const [allGroups, setAllGroups] = useState([]); // Все группы пользователя
+    const [allGroups, setAllGroups] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false); // Модалка для одной группы
-    const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false); // Модалка для нескольких групп
-    const [groupName, setGroupName] = useState(''); // Название группы (одна)
-    const [groupNames, setGroupNames] = useState(''); // Названия групп (несколько, через запятую)
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+    const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
+    const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+
+    const [groupName, setGroupName] = useState('');
+    const [groupNames, setGroupNames] = useState('');
+    const [courseName, setCourseName] = useState('');
+    const [selectedGroups, setSelectedGroups] = useState([]);
+
 
     const [formData, setFormData] = useState({
         email: '',
@@ -60,8 +60,10 @@ const Menu = ({ setSelectedComponent }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [fetchLoading, setFetchLoading] = useState(false);
 
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
 
     // Загрузка учреждений
     const loadInstitutions = async () => {
@@ -70,6 +72,7 @@ const Menu = ({ setSelectedComponent }) => {
         try {
             console.log('[Menu] Начинаем загрузку учреждений...');
             const userAction = await dispatch(getUserInstitution());
+
 
             if (userAction.meta?.requestStatus !== 'fulfilled') {
                 throw new Error(userAction.error?.message || 'Не удалось загрузить данные пользователя');
@@ -81,12 +84,12 @@ const Menu = ({ setSelectedComponent }) => {
             const institutionId = userData.institution?.id;
             console.log('[Menu] Извлечён institutionId:', institutionId);
 
+
             if (!institutionId) {
                 throw new Error('institution.id не найден в данных пользователя');
             }
 
             const institutionsAction = await dispatch(fetchInstitutions(institutionId));
-
             if (institutionsAction.meta?.requestStatus !== 'fulfilled') {
                 throw new Error(institutionsAction.error?.message || 'Не удалось загрузить учреждения');
             }
@@ -110,6 +113,7 @@ const Menu = ({ setSelectedComponent }) => {
         console.log(validInstitutions);
         const allGroups = [];
 
+
         for (const inst of validInstitutions) {
             try {
                 const result = await dispatch(fetchGroupsByInstitution(inst.id));
@@ -120,10 +124,8 @@ const Menu = ({ setSelectedComponent }) => {
                 }
             } catch (err) {
                 console.error(`Ошибка загрузки групп для ${inst.id}:`, err);
-                // Продолжаем обработку остальных учреждений, не прерываем цикл
             }
         }
-
         setAllGroups(allGroups);
     };
 
@@ -150,7 +152,6 @@ const Menu = ({ setSelectedComponent }) => {
                     full_name: '',
                     institution_type: 'SCHOOL',
                 });
-                // Перезагружаем учреждения и группы после создания
                 await loadInstitutions();
             } else {
                 setError(resultAction.error.message || 'Ошибка при создании');
@@ -170,14 +171,13 @@ const Menu = ({ setSelectedComponent }) => {
         }));
     };
 
-    // Эффект загрузки
     useEffect(() => {
         loadInstitutions();
         const intervalId = setInterval(loadInstitutions, 60000);
         return () => clearInterval(intervalId);
     }, []);
 
-    // Обработчики для модалок групп
+    // Обработчики модалок
     const openGroupModal = () => setIsGroupModalOpen(true);
     const closeGroupModal = () => {
         setIsGroupModalOpen(false);
@@ -188,6 +188,13 @@ const Menu = ({ setSelectedComponent }) => {
     const closeGroupsModal = () => {
         setIsGroupsModalOpen(false);
         setGroupNames('');
+    };
+
+    const openCourseModal = () => setIsCourseModalOpen(true);
+    const closeCourseModal = () => {
+        setIsCourseModalOpen(false);
+        setCourseName('');
+        setSelectedGroups([]);
     };
 
     // Добавление одной группы
@@ -204,7 +211,6 @@ const Menu = ({ setSelectedComponent }) => {
             }
 
             const action = await dispatch(createGroup(institutionId, { name: groupName }));
-
             if (action.meta?.requestStatus !== 'fulfilled') {
                 throw new Error(action.error?.message || 'Ошибка при создании группы');
             }
@@ -249,6 +255,7 @@ const Menu = ({ setSelectedComponent }) => {
 
             await dispatch(createGroupsBatch(institutionId, groupsToCreate));
 
+
             await loadGroupsForInstitutions(institutions);
             closeGroupsModal();
         } catch (error) {
@@ -264,7 +271,6 @@ const Menu = ({ setSelectedComponent }) => {
         try {
             setIsLoading(true);
             await dispatch(removeGroup(groupId));
-            // Перезагружаем группы после удаления
             await loadGroupsForInstitutions(institutions);
         } catch (error) {
             console.error('Ошибка при удалении группы:', error);
@@ -274,15 +280,47 @@ const Menu = ({ setSelectedComponent }) => {
         }
     };
 
+    // Добавление курса на группы
+    const handleAddCourse = async () => {
+        if (!courseName) {
+            alert('Введите название курса');
+            return;
+        }
+        if (selectedGroups.length === 0) {
+            alert('Выберите хотя бы одну группу');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            const groupIds = selectedGroups.map(group => group.id);
+
+            const action = await dispatch(addCourseByGroupIds(courseName, groupIds));
+
+            if (action.meta?.requestStatus !== 'fulfilled') {
+                throw new Error(action.error?.message || 'Ошибка при создании курса');
+            }
+
+            alert('Курс успешно добавлен!');
+            closeCourseModal();
+            await dispatch(getCoursesByUser());
+        } catch (error) {
+            console.error('Ошибка при добавлении курса:', error);
+            alert(`Произошла ошибка: ${error.message || 'Проверьте соединение'}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className={styles.menu}>
             {/* Заголовок */}
             <div className={styles.header}>
-                <span className={styles.title} onClick={() => navigate('/')}>
-                    <Button startIcon={<HomeOutlined />} size="small">
-                        Главная страница
-                    </Button>
-                </span>
+        <span className={styles.title} onClick={() => navigate('/')}>
+          <Button startIcon={<HomeOutlined />} size="small">
+            Главная страница
+          </Button>
+        </span>
             </div>
 
             {/* Список учреждений */}
@@ -306,7 +344,8 @@ const Menu = ({ setSelectedComponent }) => {
                         </Typography>
                     </div>
 
-                    {/* Кнопки управления группами */}
+
+                    {/* Кнопки управления группами и курсами */}
                     <Box display="flex" gap={1} ml={1}>
                         <Button
                             variant="outlined"
@@ -317,6 +356,7 @@ const Menu = ({ setSelectedComponent }) => {
                             Группа
                         </Button>
 
+
                         <Button
                             variant="contained"
                             color="primary"
@@ -325,6 +365,16 @@ const Menu = ({ setSelectedComponent }) => {
                             onClick={openGroupsModal}
                         >
                             Группы
+                        </Button>
+
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            size="small"
+                            startIcon={<SchoolIcon fontSize="small" />}
+                            onClick={openCourseModal}
+                        >
+                            Курс
                         </Button>
                     </Box>
                 </div>
@@ -390,15 +440,20 @@ const Menu = ({ setSelectedComponent }) => {
 
             {/* Ссылки в нижней части */}
             <span className={styles.title} onClick={() => navigate('/settings')}>
-                <Button size="small">
-                    Настройки
-                </Button>
-            </span>
+        <Button size="small">
+          Настройки
+        </Button>
+      </span>
             <span className={styles.title} onClick={() => navigate('/archive')}>
-                <Button size="small">
-                    Архив
-                </Button>
-            </span>
+        <Button size="small">
+          Архив
+        </Button>
+      </span>
+            <span className={styles.title} onClick={() => navigate('/manage-users')}>
+        <Button size="small">
+          Управлять пользователями
+        </Button>
+      </span>
 
             {/* Кнопка "Добавить учебное заведение" */}
             <Box width="100%">
@@ -491,14 +546,15 @@ const Menu = ({ setSelectedComponent }) => {
 
                         <Select
                             fullWidth
+                            name="institution_type"
                             value={formData.institution_type}
                             onChange={handleInputChange}
-                            name="institution_type"
+                            margin="normal"
                             size="small"
                         >
                             <MenuItem value="SCHOOL">Школа</MenuItem>
                             <MenuItem value="COLLEGE">Колледж</MenuItem>
-                            <MenuItem value="HIGHER_EDUCATION">Университет</MenuItem>
+                            <MenuItem value="UNIVERSITY">Университет</MenuItem>
                         </Select>
 
                         <Box mt={3} display="flex" gap={2}>
@@ -515,6 +571,7 @@ const Menu = ({ setSelectedComponent }) => {
                             <Button
                                 variant="outlined"
                                 onClick={() => setIsModalOpen(false)}
+                                disabled={isLoading}
                             >
                                 Отмена
                             </Button>
@@ -536,7 +593,7 @@ const Menu = ({ setSelectedComponent }) => {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: 350,
+                        width: 400,
                         bgcolor: 'background.paper',
                         borderRadius: 2,
                         boxShadow: 24,
@@ -577,7 +634,7 @@ const Menu = ({ setSelectedComponent }) => {
                                 disabled={isLoading}
                                 startIcon={isLoading ? <CircularProgress size={20} /> : null}
                             >
-                                {isLoading ? 'Создаётся...' : 'Создать'}
+                                {isLoading ? 'Создаётся...' : 'Добавить группу'}
                             </Button>
 
                             <Button
@@ -591,7 +648,7 @@ const Menu = ({ setSelectedComponent }) => {
                 </Box>
             </MuiModal>
 
-            {/* Модальное окно для массового добавления групп */}
+            {/* Модальное окно для добавления нескольких групп */}
             <MuiModal
                 open={isGroupsModalOpen}
                 onClose={closeGroupsModal}
@@ -612,7 +669,7 @@ const Menu = ({ setSelectedComponent }) => {
                     }}
                 >
                     <Typography variant="h6" mb={2}>
-                        Добавить группы (массово)
+                        Добавить несколько групп
                     </Typography>
 
                     {error && (
@@ -629,20 +686,14 @@ const Menu = ({ setSelectedComponent }) => {
                     >
                         <TextField
                             fullWidth
-                            multiline
-                            rows={4}
                             label="Названия групп (через запятую)"
                             value={groupNames}
                             onChange={(e) => setGroupNames(e.target.value)}
-                            placeholder="Например: 10А, 10Б, 11А"
                             required
                             margin="normal"
                             size="small"
+                            helperText="Пример: 10А, 10Б, 11В"
                         />
-
-                        <Typography variant="body2" color="textSecondary" mt={1} mb={2}>
-                            Каждое название будет обработано как отдельная группа.
-                        </Typography>
 
                         <Box mt={3} display="flex" gap={2}>
                             <Button
@@ -652,12 +703,120 @@ const Menu = ({ setSelectedComponent }) => {
                                 disabled={isLoading}
                                 startIcon={isLoading ? <CircularProgress size={20} /> : null}
                             >
-                                {isLoading ? 'Создаются...' : 'Создать группы'}
+                                {isLoading ? 'Создаются...' : 'Добавить группы'}
                             </Button>
 
                             <Button
                                 variant="outlined"
                                 onClick={closeGroupsModal}
+                            >
+                                Отмена
+                            </Button>
+                        </Box>
+                    </form>
+                </Box>
+            </MuiModal>
+
+            {/* Модальное окно для добавления курса */}
+            <MuiModal
+                open={isCourseModalOpen}
+                onClose={closeCourseModal}
+                BackdropComponent={Backdrop}
+                BackdropProps={{ timeout: 500 }}
+            >
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: 400,
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 4,
+                    }}
+                >
+                    <Typography variant="h6" mb={2}>
+                        Добавить курс
+                    </Typography>
+
+                    {error && (
+                        <Typography color="error" variant="body2" mb={2}>
+                            {error}
+                        </Typography>
+                    )}
+
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleAddCourse();
+                        }}
+                    >
+                        <TextField
+                            fullWidth
+                            label="Название курса"
+                            value={courseName}
+                            onChange={(e) => setCourseName(e.target.value)}
+                            required
+                            margin="normal"
+                            size="small"
+                        />
+
+                        <Typography variant="subtitle2" mt={2} mb={1}>
+                            Выберите группы:
+                        </Typography>
+                        <Box
+                            sx={{
+                                maxHeight: 200,
+                                overflowY: 'auto',
+                                border: '1px solid #ccc',
+                                borderRadius: 1,
+                                p: 1
+                            }}
+                        >
+                            {allGroups.map((group) => (
+                                <Box
+                                    key={group.id}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        py: 0.5,
+                                        cursor: 'pointer',
+                                        '&:hover': { bgcolor: '#f5f5f5' }
+                                    }}
+                                    onClick={() => {
+                                        setSelectedGroups((prev) =>
+                                            prev.find((g) => g.id === group.id)
+                                                ? prev.filter((g) => g.id !== group.id)
+                                                : [...prev, group]
+                                        );
+                                    }}
+                                >
+                                    <Checkbox
+                                        checked={selectedGroups.some((g) => g.id === group.id)}
+                                        size="small"
+                                    />
+                                    <Typography variant="body2">{group.name}</Typography>
+                                </Box>
+                            ))}
+                        </Box>
+
+                        <Box mt={3} display="flex" gap={2}>
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                color="primary"
+                                disabled={isLoading}
+                                startIcon={isLoading ? <CircularProgress size={20} /> : null}
+                            >
+                                {isLoading ? 'Создаётся...' : 'Добавить курс'}
+                            </Button>
+
+                            <Button
+                                variant="outlined"
+                                onClick={closeCourseModal}
                             >
                                 Отмена
                             </Button>
@@ -675,14 +834,14 @@ const Menu = ({ setSelectedComponent }) => {
                         left: 0,
                         width: '100%',
                         height: '100%',
+                        bgcolor: 'rgba(0, 0, 0, 0.2)',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
                         zIndex: 9999,
                     }}
                 >
-                    <CircularProgress />
+                    <CircularProgress color="primary" />
                 </Box>
             )}
         </div>
