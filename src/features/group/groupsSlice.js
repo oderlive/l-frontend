@@ -97,7 +97,7 @@ export const createGroup = (institutionId, groupData) => async (dispatch) => {
 export const createGroupsBatch = (institutionId, groupsData) => async (dispatch) => {
     dispatch(setLoading());
     try {
-        const newGroups = await addGroupsBatch(institutionId, groupsData);
+        const newGroups = await addGroupsBatch(groupsData);
 
         dispatch(addGroupsBatchSuccess(
             newGroups.map(g => ({

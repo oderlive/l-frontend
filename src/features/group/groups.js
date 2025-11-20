@@ -31,15 +31,12 @@ export const addGroup = async (institutionId, groupData) => {
     }
 };
 
-export const addGroupsBatch = async (institutionId, groupsData) => {
+export const addGroupsBatch = async (groupsData) => {
     try {
         const config = { ...getAuthHeaders() };
         const response = await axios.post(
             `${ENDPOINTS.GROUP}/batch`,
-            {
-                institution_id: institutionId,
-                groups: groupsData,
-            },
+                groupsData,
             config
         );
         return response.data;
@@ -64,14 +61,14 @@ export const getGroupsByInstitution = async (institution_id) => {
     }
 };
 
-export const deleteGroup = async (groupId) => {
+export const deleteGroup = async (group_id) => {
     try {
         const config = {
             ...getAuthHeaders(),
-            params: { groupId },
+            params: { group_id },
         };
         const response = await axios.delete(
-            `${ENDPOINTS.GROUP}/groups/id`,
+            `${ENDPOINTS.GROUP}/id`,
             config
         );
         return response.data;

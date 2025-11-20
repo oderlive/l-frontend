@@ -46,25 +46,25 @@ function App() {
                                         </div>
                                     }
                                 >
-                                    {selectedComponent === 'archive' && <Archive />}
-                                    {selectedComponent === 'settings' && <Settings />}
-                                    {selectedComponent === 'general' && (
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                flexWrap: 'wrap',
-                                                justifyContent: 'space-between',
-                                                gap: 2,
-                                            }}
-                                            className={styles.tileContainer}
-                                        >
-                                            {mockData.map((item, index) => (
-                                                <Tile key={index} {...item} />
-                                            ))}
-                                        </Box>
-                                    )}
+                                    {/*{selectedComponent === 'archive' && <Archive />}*/}
+                                    {/*{selectedComponent === 'settings' && <Settings />}*/}
+                                    {/*{selectedComponent === 'general' && (*/}
+                                    {/*    <Box*/}
+                                    {/*        sx={{*/}
+                                    {/*            display: 'flex',*/}
+                                    {/*            flexWrap: 'wrap',*/}
+                                    {/*            justifyContent: 'space-between',*/}
+                                    {/*            gap: 2,*/}
+                                    {/*        }}*/}
+                                    {/*        className={styles.tileContainer}*/}
+                                    {/*    >*/}
+                                    {/*        {mockData.map((item, index) => (*/}
+                                    {/*            <Tile key={index} {...item} />*/}
+                                    {/*        ))}*/}
+                                    {/*    </Box>*/}
+                                    {/*)}*/}
                                     <Routes>
-                                        <Route path="/profile-tile" element={<ProfileTile name="Артур Артур" tasks={tasks} />} />
+                                        <Route path="/profile-tile" element={<ProfileTile name="test test" tasks={tasks} />} />
                                         <Route path="/archive" element={<Archive/>} />
                                         <Route path="/settings" element={<Settings/>} />
                                         <Route path="/course" element={<Course/>} />
