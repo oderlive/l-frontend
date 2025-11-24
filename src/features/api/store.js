@@ -35,7 +35,7 @@ const store = configureStore({
     reducer: {
         auth: authReducer,
         groups: groupReducer,
-        institution: institutionsReducer,
+        institutions: institutionsReducer,
         course: courseReducer,
     },
     middleware: (getDefaultMiddleware) =>

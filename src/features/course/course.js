@@ -17,16 +17,24 @@ const getAuthHeaders = () => {
 // Функция для получения списка курсов пользователя по его ID
 export const getCoursesByUser = async () => {
     try {
-        const config = { ...getAuthHeaders() };
+        const userId = localStorage.getItem('user_id');
+        const config = {
+            ...getAuthHeaders(),
+            params: {
+                userId: userId
+            }
+        };
         const response = await axios.get(
-            `${ENDPOINTS.COURSES}/user`,
+            `${ENDPOINTS.COURSES}/user/${userId}`,
             config
         );
+        console.log(response.data)
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message || error;
     }
 };
+
 
 // Функция для добавления курса по списку ID учебных групп
 export const addCourseByGroupIds = async (name, groupIdList) => {

@@ -9,7 +9,7 @@ export const fetchInstitutions = createAsyncThunk(
         try {
             console.log('[fetchInstitutions] Получен institutionId:', institutionId);
             const accessToken = localStorage.getItem('access_token');
-            const response = await axios.get(`${ENDPOINTS.INSTITUTIONS}`, {
+            const response = await axios.get(`${ENDPOINTS.INSTITUTIONS}/${institutionId}`, {
                 params: { institution_id: institutionId },
                 headers: {
                     Authorization: `Bearer ${accessToken}`,

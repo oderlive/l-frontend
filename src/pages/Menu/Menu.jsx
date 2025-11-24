@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {useDispatch} from 'react-redux';
+import React, { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import {
     Backdrop,
     Box,
@@ -23,14 +23,20 @@ import {
     School as SchoolIcon
 } from '@mui/icons-material';
 
-
 import styles from './Menu.module.css';
-import {useNavigate} from 'react-router-dom';
-import {createInstitution, fetchInstitutions} from '../../features/institutions/institutions';
-import {getUserInstitution} from '../../features/users/users';
-import {createGroup, createGroupsBatch, fetchGroupsByInstitution, removeGroup} from '../../features/group/groupsSlice';
-import {addCourseByGroupIds, getCoursesByUser} from '../../features/course/course';
-
+import { useNavigate } from 'react-router-dom';
+import {
+    createInstitution,
+    fetchInstitutions
+} from '../../features/institutions/institutions';
+import { getUserInstitution } from '../../features/users/users';
+import {
+    createGroup,
+    createGroupsBatch,
+    fetchGroupsByInstitution,
+    removeGroup
+} from '../../features/group/groupsSlice';
+import {addCourseByGroupIdsThunk, fetchCoursesByUser} from "../../features/course/courseSlice";
 
 const Menu = ({ setSelectedComponent }) => {
     const [institutions, setInstitutions] = useState([]);
@@ -40,12 +46,13 @@ const Menu = ({ setSelectedComponent }) => {
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
     const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [selectedGroup, setSelectedGroup] = useState(null);
 
     const [groupName, setGroupName] = useState('');
     const [groupNames, setGroupNames] = useState('');
     const [courseName, setCourseName] = useState('');
     const [selectedGroups, setSelectedGroups] = useState([]);
-
 
     const [formData, setFormData] = useState({
         email: '',
@@ -60,10 +67,8 @@ const Menu = ({ setSelectedComponent }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [fetchLoading, setFetchLoading] = useState(false);
 
-
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
 
     // Загрузка учреждений
     const loadInstitutions = async () => {
@@ -72,7 +77,6 @@ const Menu = ({ setSelectedComponent }) => {
         try {
             console.log('[Menu] Начинаем загрузку учреждений...');
             const userAction = await dispatch(getUserInstitution());
-
 
             if (userAction.meta?.requestStatus !== 'fulfilled') {
                 throw new Error(userAction.error?.message || 'Не удалось загрузить данные пользователя');
@@ -84,9 +88,12 @@ const Menu = ({ setSelectedComponent }) => {
             const institutionId = userData.institution?.id;
             console.log('[Menu] Извлечён institutionId:', institutionId);
 
-
+            // Если institutionId нет — просто не загружаем учреждения, но продолжаем работу
             if (!institutionId) {
-                throw new Error('institution.id не найден в данных пользователя');
+                console.log('[Menu] institution.id не найден, пропускаем загрузку учреждений');
+                setInstitutions([]);
+                setAllGroups([]);
+                return;
             }
 
             const institutionsAction = await dispatch(fetchInstitutions(institutionId));
@@ -99,6 +106,15 @@ const Menu = ({ setSelectedComponent }) => {
             setInstitutions([resultAction]);
 
             await loadGroupsForInstitutions([resultAction]);
+            const coursesAction = await dispatch(fetchCoursesByUser());
+            if (coursesAction.meta?.requestStatus === 'fulfilled' && Array.isArray(coursesAction.payload)) {
+                setCourses(coursesAction.payload);
+            }
+            console.log(coursesAction.payload)
+
+            setCourses(coursesAction.payload);
+            console.log(allGroups)
+            console.log(courses)
         } catch (err) {
             setError(err.message || 'Произошла ошибка при загрузке учреждений');
             console.error('[Menu] Ошибка загрузки:', err);
@@ -112,7 +128,6 @@ const Menu = ({ setSelectedComponent }) => {
         const validInstitutions = institutionsList.filter(inst => inst.id);
         console.log(validInstitutions);
         const allGroups = [];
-
 
         for (const inst of validInstitutions) {
             try {
@@ -152,7 +167,7 @@ const Menu = ({ setSelectedComponent }) => {
                     full_name: '',
                     institution_type: 'SCHOOL',
                 });
-                await loadInstitutions();
+                await loadInstitutions(); // Перезагружаем данные после создания
             } else {
                 setError(resultAction.error.message || 'Ошибка при создании');
             }
@@ -207,7 +222,8 @@ const Menu = ({ setSelectedComponent }) => {
             setIsLoading(true);
             const institutionId = institutions[0]?.id;
             if (!institutionId) {
-                throw new Error('Не найден ID учреждения');
+                alert('Для создания группы необходимо сначала создать учреждение');
+                return;
             }
 
             const action = await dispatch(createGroup(institutionId, { name: groupName }));
@@ -218,8 +234,7 @@ const Menu = ({ setSelectedComponent }) => {
             await loadGroupsForInstitutions(institutions);
             closeGroupModal();
         } catch (error) {
-            console.error('Ошибка при добавлении группы:', error);
-            alert('Произошла ошибка при добавлении группы');
+
         } finally {
             setIsLoading(false);
         }
@@ -247,14 +262,13 @@ const Menu = ({ setSelectedComponent }) => {
 
             const institutionId = institutions[0]?.id;
             if (!institutionId) {
-                alert('Не найден ID учреждения');
+                alert('Для создания групп необходимо сначала создать учреждение');
                 return;
             }
 
             const groupsToCreate = namesArray.map(name => ({ name: name }));
 
             await dispatch(createGroupsBatch(institutionId, groupsToCreate));
-
 
             await loadGroupsForInstitutions(institutions);
             closeGroupsModal();
@@ -280,6 +294,30 @@ const Menu = ({ setSelectedComponent }) => {
         }
     };
 
+    // Удаление курса
+    const handleDeleteCourse = async (courseId) => {
+        try {
+            setIsLoading(true);
+            // Предполагаем, что есть экшен removeCourse — замените на актуальный
+            //const action = await dispatch(removeCourse(courseId));
+
+            // if (action.meta?.requestStatus !== 'fulfilled') {
+            //     throw new Error(action.error?.message || 'Ошибка при удалении курса');
+            // }
+
+            // Перезагружаем курсы
+            const updatedCoursesAction = await dispatch(fetchCoursesByUser());
+            if (updatedCoursesAction.meta?.requestStatus === 'fulfilled') {
+                setCourses(updatedCoursesAction.payload);
+            }
+        } catch (error) {
+            console.error('Ошибка при удалении курса:', error);
+            alert(`Произошла ошибка: ${error.message || 'Проверьте соединение'}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Добавление курса на группы
     const handleAddCourse = async () => {
         if (!courseName) {
@@ -295,15 +333,17 @@ const Menu = ({ setSelectedComponent }) => {
             setIsLoading(true);
             const groupIds = selectedGroups.map(group => group.id);
 
-            const action = await dispatch(addCourseByGroupIds(courseName, groupIds));
+            const action = await dispatch(addCourseByGroupIdsThunk(courseName, groupIds));
 
             if (action.meta?.requestStatus !== 'fulfilled') {
                 throw new Error(action.error?.message || 'Ошибка при создании курса');
             }
-
-            alert('Курс успешно добавлен!');
+            const updatedCoursesAction = await dispatch(fetchCoursesByUser());
+            if (updatedCoursesAction.meta?.requestStatus === 'fulfilled') {
+                setCourses(updatedCoursesAction.payload);
+            }
             closeCourseModal();
-            await dispatch(getCoursesByUser());
+            await dispatch(fetchCoursesByUser());
         } catch (error) {
             console.error('Ошибка при добавлении курса:', error);
             alert(`Произошла ошибка: ${error.message || 'Проверьте соединение'}`);
@@ -324,61 +364,66 @@ const Menu = ({ setSelectedComponent }) => {
             </div>
 
             {/* Список учреждений */}
-            {institutions.map(inst => (
-                <div key={inst.id} className={styles.institutionRow}>
-                    <div
-                        className={styles.item}
-                        style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            flexGrow: 1
-                        }}
-                        onClick={() => toggleInstitution(inst.id)}
-                    >
-                        <SchoolIcon fontSize="small" color="primary" />
-                        {expandedInstitutions[inst.id] ? <ArrowDropUp /> : <ArrowDropDown />}
-                        <Typography variant="body1">
-                            {inst.short_name || inst.name || 'Название не указано'}
-                        </Typography>
+            {institutions.length > 0 ? (
+                institutions.map(inst => (
+                    <div key={inst.id} className={styles.institutionRow}>
+                        <div
+                            className={styles.item}
+                            style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                flexGrow: 1
+                            }}
+                            onClick={() => toggleInstitution(inst.id)}
+                        >
+                            <SchoolIcon fontSize="small" color="primary" />
+                            {expandedInstitutions[inst.id] ? <ArrowDropUp /> : <ArrowDropDown />}
+                            <Typography variant="body1">
+                                {inst.short_name || inst.name || 'Название не указано'}
+                            </Typography>
+                        </div>
+
+
+                        {/* Кнопки управления группами и курсами */}
+                        <Box display="flex" gap={1} ml={1}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<GroupAddIcon fontSize="small" />}
+                                onClick={openGroupModal}
+                            >
+                                Группа
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                size="small"
+                                startIcon={<AddIcon fontSize="small" />}
+                                onClick={openGroupsModal}
+                            >
+                                Группы
+                            </Button>
+
+                            <Button
+                                variant="contained"
+                                color="secondary"
+                                size="small"
+                                startIcon={<SchoolIcon fontSize="small" />}
+                                onClick={openCourseModal}
+                            >
+                                Курс
+                            </Button>
+                        </Box>
                     </div>
-
-
-                    {/* Кнопки управления группами и курсами */}
-                    <Box display="flex" gap={1} ml={1}>
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<GroupAddIcon fontSize="small" />}
-                            onClick={openGroupModal}
-                        >
-                            Группа
-                        </Button>
-
-
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            size="small"
-                            startIcon={<AddIcon fontSize="small" />}
-                            onClick={openGroupsModal}
-                        >
-                            Группы
-                        </Button>
-
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            size="small"
-                            startIcon={<SchoolIcon fontSize="small" />}
-                            onClick={openCourseModal}
-                        >
-                            Курс
-                        </Button>
-                    </Box>
-                </div>
-            ))}
+                ))
+            ) : (
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                    Учреждения не найдены. Создайте учреждение, чтобы начать работу.
+                </Typography>
+            )}
 
             {/* Блок с группами для развёрнутого учреждения */}
             {institutions.map(inst => {
@@ -421,6 +466,25 @@ const Menu = ({ setSelectedComponent }) => {
                                             >
                                                 <DeleteIcon fontSize="small" />
                                             </Button>
+                                            {/* Обработчик клика для открытия курсов группы */}
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                onClick={() => {
+                                                    if (selectedGroup?.id === group.id) {
+                                                        setSelectedGroup(null);
+                                                    } else {
+                                                        setSelectedGroup(group);
+                                                    }
+                                                }}
+                                                sx={{
+                                                    minWidth: 'auto',
+                                                    padding: '0 8px',
+                                                    marginLeft: '8px'
+                                                }}
+                                            >
+                                                Курсы
+                                            </Button>
                                         </div>
                                     ))
                                 ) : (
@@ -433,30 +497,80 @@ const Menu = ({ setSelectedComponent }) => {
                                     </Typography>
                                 )}
                             </div>
+
+                            {/* Блок с курсами для выбранной группы */}
+                            {selectedGroup && (
+                                <div key={`group-courses-${selectedGroup.id}`} className={styles.groupCoursesList}>
+                                    <Typography variant="subtitle2" color="textSecondary" ml={3} mb={1}>
+                                        Курсы группы "{selectedGroup.name}"
+                                    </Typography>
+                                    <div className={styles.coursesContainer}>
+                                        {courses.length > 0 ? (
+                                            courses.map(course => (
+                                                <div key={course.id} className={styles.courseItem}>
+                                                    <SchoolIcon
+                                                        fontSize="small"
+                                                        sx={{ color: '#2e7d32', mr: 1 }}
+                                                    />
+                                                    <Typography variant="body2" className={styles.courseName}>
+                                                        {course.name || 'Без названия'}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="textSecondary"
+                                                        sx={{ ml: 1, mr: 1 }}
+                                                    >
+                                                        Создатель: {course.creator?.name || 'Неизвестен'}
+                                                    </Typography>
+                                                    <Button
+                                                        variant="text"
+                                                        color="error"
+                                                        size="small"
+                                                        onClick={() => handleDeleteCourse(course.id)}
+                                                        disabled={isLoading}
+                                                        sx={{
+                                                            minWidth: 'auto',
+                                                            padding: '0 4px',
+                                                            marginLeft: '8px'
+                                                        }}
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <Typography
+                                                variant="body2"
+                                                color="textSecondary"
+                                                className={styles.noCoursesMessage}
+                                            >
+                                                Нет курсов
+                                            </Typography>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     )
                 );
             })}
 
+
             {/* Ссылки в нижней части */}
             <span className={styles.title} onClick={() => navigate('/settings')}>
-        <Button size="small">
-          Настройки
-        </Button>
+        <Button size="small">Настройки</Button>
       </span>
             <span className={styles.title} onClick={() => navigate('/archive')}>
-        <Button size="small">
-          Архив
-        </Button>
+        <Button size="small">Архив</Button>
       </span>
             <span className={styles.title} onClick={() => navigate('/manage-users')}>
-        <Button size="small">
-          Управлять пользователями
-        </Button>
+        <Button size="small">Управлять пользователями</Button>
       </span>
 
-            {/* Кнопка "Добавить учебное заведение" */}
-            <Box width="100%">
+
+            {/* Кнопка "Добавить учебное заведение" — всегда видна */}
+            <Box width="100%" sx={{ mt: 2 }}>
                 <Button
                     variant="contained"
                     color="primary"
@@ -842,6 +956,24 @@ const Menu = ({ setSelectedComponent }) => {
                     }}
                 >
                     <CircularProgress color="primary" />
+                </Box>
+            )}
+
+            {/* Уведомление об отсутствии учреждений */}
+            {institutions.length === 0 && !fetchLoading && (
+                <Box
+                    sx={{
+                        mt: 2,
+                        p: 2,
+                        bgcolor: 'warning.main',
+                        color: 'warning.contrastText',
+                        borderRadius: 1,
+                        textAlign: 'center',
+                    }}
+                >
+                    <Typography variant="body2">
+                        Для работы с группами и курсами необходимо создать учебное заведение.
+                    </Typography>
                 </Box>
             )}
         </div>

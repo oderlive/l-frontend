@@ -167,3 +167,29 @@
     font-size: 12px;
     margin-top: 4px;
 }
+
+.coursesList {
+    margin-top: 16px;
+}
+
+.coursesContainer {
+    padding-left: 24px;
+    border-left: 2px solid #e0e0e0;
+}
+
+.courseItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.courseName {
+    font-weight: 500;
+}
+
+.noCoursesMessage {
+    color: #757575;
+    font-style: italic;
+    padding: 8px 0;
+}

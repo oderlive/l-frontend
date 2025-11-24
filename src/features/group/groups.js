@@ -52,7 +52,7 @@ export const getGroupsByInstitution = async (institution_id) => {
             params: { institution_id },
         };
         const response = await axios.get(
-            `${ENDPOINTS.GROUP}/institution`,
+            `${ENDPOINTS.GROUP}/institution/${institution_id}`,
             config
         );
         return response.data;

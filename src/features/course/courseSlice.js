@@ -28,54 +28,33 @@ const coursesSlice = createSlice({
     },
 });
 
-// Thunk для получения курсов пользователя
 export const fetchCoursesByUser = () => async (dispatch) => {
     dispatch(setLoading());
     try {
-        const courses = await getCoursesByUser();
-
-        // Отправляем данные в store
+        const courses = await getCoursesByUser(); // Вызов API
         dispatch(setCourses(courses));
-
-        // Возвращаем результат для await dispatch()
-        return {
-            meta: { requestStatus: 'fulfilled' },
-            payload: courses,
-        };
+        return { meta: { requestStatus: 'fulfilled' }, payload: courses };
     } catch (error) {
         dispatch(setError(error.message));
-
-        // Возвращаем ошибку для await dispatch()
-        return {
-            meta: { requestStatus: 'rejected' },
-            error: error.message,
-            payload: [],
-        };
+        return { meta: { requestStatus: 'rejected' }, error: error.message, payload: [] };
     }
 };
 
 export const addCourseByGroupIdsThunk = (name, groupIdList) => async (dispatch) => {
-    dispatch(setLoading()); // Устанавливаем состояние загрузки
+    dispatch(setLoading());
     try {
-        const response = await addCourseByGroupIds(name, groupIdList); // Вызываем API
+        await addCourseByGroupIds(name, groupIdList);
 
-        // Логика после успешного добавления курса (например, обновление списка курсов)
-        const courses = await getCoursesByUser(); // Перезагружаем список курсов
-        dispatch(setCourses(courses));
+        const updatedCourses = await getCoursesByUser(); // Перезагрузка через API
+        dispatch(setCourses(updatedCourses));
 
-        return {
-            meta: { requestStatus: 'fulfilled' },
-            payload: response,
-        };
+        return { meta: { requestStatus: 'fulfilled' }, payload: updatedCourses };
     } catch (error) {
         dispatch(setError(error.message));
-        return {
-            meta: { requestStatus: 'rejected' },
-            error: error.message,
-            payload: [],
-        };
+        return { meta: { requestStatus: 'rejected' }, error: error.message, payload: [] };
     }
 };
+
 
 
 // Экспорт редьюсеров и редуктора слайса
