@@ -1,0 +1,37 @@
+.coursesSection {
+    margin-top: 24px;
+    padding: 16px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+}
+
+/* Контейнер для списка курсов */
+.coursesContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Отдельный элемент курса */
+.courseItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Название курса */
+.courseName {
+    font-weight: 500;
+    color: #1976d2;
+}
+
+/* Сообщение "Нет общих курсов" */
+.noCoursesMessage {
+    text-align: center;
+    padding: 16px;
+    color: #666;
+}

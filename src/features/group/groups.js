@@ -68,7 +68,7 @@ export const deleteGroup = async (group_id) => {
             params: { group_id },
         };
         const response = await axios.delete(
-            `${ENDPOINTS.GROUP}/id`,
+            `${ENDPOINTS.GROUP}/${group_id}`,
             config
         );
         return response.data;

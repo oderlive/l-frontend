@@ -53,3 +53,16 @@ export const addCourseByGroupIds = async (name, groupIdList) => {
         throw error.response?.data || error.message || error;
     }
 };
+
+export const deleteCourseById = async (courseId) => {
+    try {
+        const config = { ...getAuthHeaders() };
+        const response = await axios.delete(
+            `${ENDPOINTS.COURSES}/${courseId}`,
+            config
+        );
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message || error;
+    }
+};

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux'; // Добавляем
+import { useSelector } from 'react-redux';
 import styles from './Navbar.module.css';
 import classIcon from '../../assets/icons/class.svg';
 import classMenu from '../../assets/icons/class-menu.svg';

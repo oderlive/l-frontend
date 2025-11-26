@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import styles from './ManageUsers.module.css';
-import {addUsersBatch} from "../../features/users/users";
+import {addUsersBatch} from "../../features/users/usersSlice";
 
 const AddUsersForm = () => {
     const dispatch = useDispatch();

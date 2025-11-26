@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import {addCourseByGroupIds, getCoursesByUser} from './course';
+import {addCourseByGroupIds, deleteCourseById, getCoursesByUser} from './courses';
 
 // Инициалиальное состояние слайса
 const initialState = {
@@ -54,6 +54,29 @@ export const addCourseByGroupIdsThunk = (name, groupIdList) => async (dispatch) 
         return { meta: { requestStatus: 'rejected' }, error: error.message, payload: [] };
     }
 };
+
+export const deleteCourseByIdThunk = (courseId) => async (dispatch) => {
+    dispatch(setLoading());
+    try {
+        await deleteCourseById(courseId); // Вызываем функцию удаления
+
+        const updatedCourses = await getCoursesByUser(); // Перезагружаем список курсов
+        dispatch(setCourses(updatedCourses));
+
+        return {
+            meta: { requestStatus: 'fulfilled' },
+            payload: updatedCourses
+        };
+    } catch (error) {
+        dispatch(setError(error.message));
+        return {
+            meta: { requestStatus: 'rejected' },
+            error: error.message,
+            payload: []
+        };
+    }
+};
+
 
 
 

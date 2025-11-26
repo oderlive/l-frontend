@@ -36,7 +36,8 @@ import {
     fetchGroupsByInstitution,
     removeGroup
 } from '../../features/group/groupsSlice';
-import {addCourseByGroupIdsThunk, fetchCoursesByUser} from "../../features/course/courseSlice";
+import {addCourseByGroupIdsThunk, deleteCourseByIdThunk, fetchCoursesByUser} from "../../features/course/coursesSlice";
+import CoursesSection from "../CoursesSection/CoursesSection";
 
 const Menu = ({ setSelectedComponent }) => {
     const [institutions, setInstitutions] = useState([]);
@@ -48,6 +49,8 @@ const Menu = ({ setSelectedComponent }) => {
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
     const [courses, setCourses] = useState([]);
     const [selectedGroup, setSelectedGroup] = useState(null);
+    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [isAddingCourse, setIsAddingCourse] = useState(false);
 
     const [groupName, setGroupName] = useState('');
     const [groupNames, setGroupNames] = useState('');
@@ -298,25 +301,17 @@ const Menu = ({ setSelectedComponent }) => {
     const handleDeleteCourse = async (courseId) => {
         try {
             setIsLoading(true);
-            // Предполагаем, что есть экшен removeCourse — замените на актуальный
-            //const action = await dispatch(removeCourse(courseId));
-
-            // if (action.meta?.requestStatus !== 'fulfilled') {
-            //     throw new Error(action.error?.message || 'Ошибка при удалении курса');
-            // }
-
-            // Перезагружаем курсы
-            const updatedCoursesAction = await dispatch(fetchCoursesByUser());
-            if (updatedCoursesAction.meta?.requestStatus === 'fulfilled') {
-                setCourses(updatedCoursesAction.payload);
-            }
+            console.log(courseId)
+            await dispatch(deleteCourseByIdThunk(courseId));
         } catch (error) {
             console.error('Ошибка при удалении курса:', error);
+            console.log(   courseId )
             alert(`Произошла ошибка: ${error.message || 'Проверьте соединение'}`);
         } finally {
             setIsLoading(false);
         }
     };
+
 
     // Добавление курса на группы
     const handleAddCourse = async () => {
@@ -324,26 +319,22 @@ const Menu = ({ setSelectedComponent }) => {
             alert('Введите название курса');
             return;
         }
-        if (selectedGroups.length === 0) {
-            alert('Выберите хотя бы одну группу');
-            return;
-        }
 
         try {
             setIsLoading(true);
-            const groupIds = selectedGroups.map(group => group.id);
 
-            const action = await dispatch(addCourseByGroupIdsThunk(courseName, groupIds));
+            const action = await dispatch(addCourseByGroupIdsThunk(courseName, [])); // Пустой массив групп
 
             if (action.meta?.requestStatus !== 'fulfilled') {
                 throw new Error(action.error?.message || 'Ошибка при создании курса');
             }
+
             const updatedCoursesAction = await dispatch(fetchCoursesByUser());
             if (updatedCoursesAction.meta?.requestStatus === 'fulfilled') {
                 setCourses(updatedCoursesAction.payload);
             }
+
             closeCourseModal();
-            await dispatch(fetchCoursesByUser());
         } catch (error) {
             console.error('Ошибка при добавлении курса:', error);
             alert(`Произошла ошибка: ${error.message || 'Проверьте соединение'}`);
@@ -351,6 +342,7 @@ const Menu = ({ setSelectedComponent }) => {
             setIsLoading(false);
         }
     };
+
 
     return (
         <div className={styles.menu}>
@@ -406,16 +398,6 @@ const Menu = ({ setSelectedComponent }) => {
                             >
                                 Группы
                             </Button>
-
-                            <Button
-                                variant="contained"
-                                color="secondary"
-                                size="small"
-                                startIcon={<SchoolIcon fontSize="small" />}
-                                onClick={openCourseModal}
-                            >
-                                Курс
-                            </Button>
                         </Box>
                     </div>
                 ))
@@ -466,25 +448,6 @@ const Menu = ({ setSelectedComponent }) => {
                                             >
                                                 <DeleteIcon fontSize="small" />
                                             </Button>
-                                            {/* Обработчик клика для открытия курсов группы */}
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                onClick={() => {
-                                                    if (selectedGroup?.id === group.id) {
-                                                        setSelectedGroup(null);
-                                                    } else {
-                                                        setSelectedGroup(group);
-                                                    }
-                                                }}
-                                                sx={{
-                                                    minWidth: 'auto',
-                                                    padding: '0 8px',
-                                                    marginLeft: '8px'
-                                                }}
-                                            >
-                                                Курсы
-                                            </Button>
                                         </div>
                                     ))
                                 ) : (
@@ -498,63 +461,34 @@ const Menu = ({ setSelectedComponent }) => {
                                 )}
                             </div>
 
-                            {/* Блок с курсами для выбранной группы */}
-                            {selectedGroup && (
-                                <div key={`group-courses-${selectedGroup.id}`} className={styles.groupCoursesList}>
-                                    <Typography variant="subtitle2" color="textSecondary" ml={3} mb={1}>
-                                        Курсы группы "{selectedGroup.name}"
-                                    </Typography>
-                                    <div className={styles.coursesContainer}>
-                                        {courses.length > 0 ? (
-                                            courses.map(course => (
-                                                <div key={course.id} className={styles.courseItem}>
-                                                    <SchoolIcon
-                                                        fontSize="small"
-                                                        sx={{ color: '#2e7d32', mr: 1 }}
-                                                    />
-                                                    <Typography variant="body2" className={styles.courseName}>
-                                                        {course.name || 'Без названия'}
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        color="textSecondary"
-                                                        sx={{ ml: 1, mr: 1 }}
-                                                    >
-                                                        Создатель: {course.creator?.name || 'Неизвестен'}
-                                                    </Typography>
-                                                    <Button
-                                                        variant="text"
-                                                        color="error"
-                                                        size="small"
-                                                        onClick={() => handleDeleteCourse(course.id)}
-                                                        disabled={isLoading}
-                                                        sx={{
-                                                            minWidth: 'auto',
-                                                            padding: '0 4px',
-                                                            marginLeft: '8px'
-                                                        }}
-                                                    >
-                                                        <DeleteIcon fontSize="small" />
-                                                    </Button>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <Typography
-                                                variant="body2"
-                                                color="textSecondary"
-                                                className={styles.noCoursesMessage}
-                                            >
-                                                Нет курсов
-                                            </Typography>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+
 
                         </div>
                     )
                 );
             })}
+            {/* "Курсы"*/}
+            <div className={styles.coursesSection}>
+                <Typography variant="h6" color="textPrimary" mb={2}>
+                    Курсы
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={<AddIcon fontSize="small" />}
+                        onClick={openCourseModal}
+                        sx={{ ml: 2 }}
+                    >
+                        Курс
+                    </Button>
+                </Typography>
+
+                <CoursesSection
+                    courses={courses}
+                    onDeleteCourse={handleDeleteCourse}
+                    isLoading={isLoading}
+                />
+            </div>
 
 
             {/* Ссылки в нижней части */}

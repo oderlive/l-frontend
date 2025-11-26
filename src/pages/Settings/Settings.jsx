@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Box,
     Typography,
@@ -18,9 +18,11 @@ import {
     enableTfa,
     disableTfa
 } from '../../features/auth/auth';
+import {fetchUserInstitution, selectUserInstitution} from "../../features/users/usersSlice";
 
 const Settings = () => {
     const dispatch = useDispatch();
+    const user = useSelector(selectUserInstitution);
 
     // Состояние для активации аккаунта
     const [loading, setLoading] = useState(false);
@@ -77,9 +79,22 @@ const Settings = () => {
 
         try {
             if (isTfaEnabled) {
-                await dispatch(disableTfa());
+                await dispatch(disableTfa({
+                    email: user.email,
+                    password: user.password
+                }));
             } else {
-                await dispatch(enableTfa());
+                // Проверяем, что данные пользователя загружены
+                if (!user || !user.email || !user.password) {
+                    setTfaEnableError('Не удалось получить данные пользователя');
+                    return;
+                }
+
+                // Передаем email и password в enableTfa
+                await dispatch(enableTfa({
+                    email: user.email,
+                    password: user.password
+                }));
             }
             setIsTfaEnabled(!isTfaEnabled);
             setTfaEnableError(null);
@@ -90,6 +105,7 @@ const Settings = () => {
             setTfaEnableLoading(false);
         }
     };
+
 
     // Обработчик верификации 2FA
     const handleVerifyTfa = async () => {
@@ -158,6 +174,11 @@ const Settings = () => {
             setTfaResetLoading(false);
         }
     };
+
+
+    useEffect(() => {
+        dispatch(fetchUserInstitution());
+    }, [dispatch]);
 
     return (
         <Box

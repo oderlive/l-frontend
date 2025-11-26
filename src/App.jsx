@@ -18,7 +18,7 @@ import { Provider } from 'react-redux';
 import ProfileTile from "./pages/ProfileTile/ProfileTile";
 import FileCourse from "./pages/FileCourse/FileCourse";
 import Course from "./pages/Course/Course";
-import {getCoursesByUser} from "./features/course/course";
+import {getCoursesByUser} from "./features/course/courses";
 import ManageUsers from "./pages/ManageUser/ManageUsers";
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
