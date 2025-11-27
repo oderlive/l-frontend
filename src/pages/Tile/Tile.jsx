@@ -5,7 +5,7 @@ import tileFolder from '../../assets/icons/folder.svg';
 import tileDots from '../../assets/icons/3-dots.svg';
 import { useNavigate } from 'react-router-dom';
 
-const Tile = ({ course, teacher, imageUrl }) => {
+const Tile = ({ course, name, surname, imageUrl }) => {
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const menuButtonRef = useRef(null);
@@ -41,8 +41,8 @@ const Tile = ({ course, teacher, imageUrl }) => {
                 <h2 className={styles.course}>{course}</h2>
             </div>
             <div className={styles.content}>
-                <img src={imageUrl} alt={teacher} className={styles.avatar} />
-                <p className={styles.teacher}>{teacher}</p>
+                <img src={imageUrl} alt={name} className={styles.avatar} />
+                <p className={styles.teacher}>{name} {surname}</p>
             </div>
             <div className={styles.actions}>
                 <button

@@ -87,7 +87,8 @@ function App() {
                                                         <Tile
                                                             key={index}
                                                             course={course.name}
-                                                            teacher={course.teacher}
+                                                            name={course.creator.name}
+                                                            surname={course.creator.surname}
                                                             imageUrl={avatar}
                                                         />
                                                     ))}
