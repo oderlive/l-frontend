@@ -501,7 +501,12 @@ const Menu = ({ setSelectedComponent }) => {
             <span className={styles.title} onClick={() => navigate('/manage-users')}>
         <Button size="small">Управлять пользователями</Button>
       </span>
-
+            <span className={styles.title} onClick={() => navigate('/statistics')}>
+        <Button size="small">Статистика</Button>
+      </span>
+            <span className={styles.title} onClick={() => navigate('/rewards')}>
+        <Button size="small">Модуль поощрений</Button>
+      </span>
 
             {/* Кнопка "Добавить учебное заведение" — всегда видна */}
             <Box width="100%" sx={{ mt: 2 }}>

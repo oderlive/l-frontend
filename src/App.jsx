@@ -20,6 +20,9 @@ import FileCourse from "./pages/FileCourse/FileCourse";
 import Course from "./pages/Course/Course";
 import {getCoursesByUser} from "./features/course/courses";
 import ManageUsers from "./pages/ManageUser/ManageUsers";
+import Statistics from "./pages/Statistics/Statistics";
+import RewardsPage from "./pages/Rewards/Rewards";
+import Rewards from "./pages/Rewards/Rewards";
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
@@ -72,6 +75,8 @@ function App() {
                                             <Route path="/course" element={<Course/>} />
                                             <Route path="/file-course" element={<FileCourse/>} />
                                             <Route path="/manage-users" element={<ManageUsers/>} />
+                                            <Route path="/statistics" element={<Statistics/>} />
+                                            <Route path="/rewards" element={<Rewards/>} />
                                             <Route path="/" element={
                                                 <Box
                                                     sx={{

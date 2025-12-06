@@ -48,8 +48,7 @@ const Navbar = () => {
                         alt="Menu"
                         style={{ width: 40, height: 40, cursor: 'pointer' }}
                     />
-                    <img src={classIcon} alt="Logo" />
-                    <span>Класс</span>
+                    <img src={"https://sun9-79.userapi.com/s/v1/ig2/yCvCoaPXh09Daz1Y9vt0Op5EqH54WfbRGwOC8Gcl2xf-XxYq8u6QIwI7iLPqb9-xU84ugTYOCCX7kLxPf2qJ4N01.jpg?quality=95&as=32x32,48x48,72x72,108x108,160x160,240x240,360x360,480x480,540x540,640x640,720x720,1080x1080,1275x1275&from=bu&cs=1275x0"} alt="Logo" />
                 </div>
                 <div className={styles.navbar__right}>
                     <button
