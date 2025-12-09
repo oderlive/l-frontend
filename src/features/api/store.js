@@ -4,6 +4,9 @@ import groupReducer from '../group/groupsSlice.js';
 import institutionsReducer from '../institutions/institutionsSlice.js';
 import courseReducer from '../course/coursesSlice';
 import usersReducer from '../users/usersSlice';
+import tasksReducer from '../tasks/tasksSlice';
+import commentsReducer from '../comments/commentsSlice';
+import solutionReducer from '../solution/solutionsSlice';
 
 // Функция для загрузки начального состояния из localStorage
 const loadState = () => {
@@ -39,6 +42,9 @@ const store = configureStore({
         institutions: institutionsReducer,
         course: courseReducer,
         users: usersReducer,
+        tasks: tasksReducer,
+        comments: commentsReducer,
+        solutions: solutionReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

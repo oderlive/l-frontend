@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Button,
@@ -10,72 +10,85 @@ import {
     InputLabel,
     Grid,
 } from '@mui/material';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+    addTaskToCourse,
+    getTaskById,
+    deleteTaskById,
+    updateTaskById,
+    getTasksByCourseId,
+    getTasksByCourseAndUserId,
+} from '../../features/tasks/tasks'; // путь к вашим thunks
 import styles from './ManageUsers.module.css';
-import {addUsersBatch} from "../../features/users/usersSlice";
 
-const AddUsersForm = () => {
+const TasksManager = ({ courseId, userId }) => {
     const dispatch = useDispatch();
+    const tasks = useSelector(state => state.tasks.tasks);
+    const task = useSelector(state => state.tasks.task);
+    const isLoading = useSelector(state => state.tasks.loading);
+    const error = useSelector(state => state.tasks.error);
 
-    // Состояние для формы (один пользователь, но можно расширить для множественного ввода)
-    const [user, setUser] = useState({
-        surname: '',
-        name: '',
-        patronymic: '',
-        role: 'STUDENT',
-        email: '',
-        age: '',
-        group_name: '',
+    const [taskData, setTaskData] = useState({
+        title: '',
+        description: '',
+        deadline: '',
     });
 
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(false);
+    const [selectedTaskId, setSelectedTaskId] = useState(null);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setUser((prev) => ({ ...prev, [name]: value }));
+    useEffect(() => {
+        // Загружаем задачи при монтировании компонента
+        dispatch(getTasksByCourseId(courseId));
+    }, [dispatch, courseId]);
+
+    // Добавление новой задачи
+    const handleAddTask = async (e) => {
+        e.preventDefault();
+        try {
+            await dispatch(addTaskToCourse({
+                courseId,
+                taskBody: taskData,
+            }));
+            setTaskData({ title: '', description: '', deadline: '' }); // Сброс формы
+        } catch (err) {
+            console.error('Ошибка при добавлении задачи:', err);
+        }
     };
 
-    const handleSubmit = async (e) => {
+    // Получение задачи по ID
+    const handleViewTask = async (taskId) => {
+        setSelectedTaskId(taskId);
+        await dispatch(getTaskById(taskId));
+    };
+
+    // Удаление задачи
+    const handleDeleteTask = async (taskId) => {
+        if (window.confirm('Вы уверены, что хотите удалить задачу?')) {
+            await dispatch(deleteTaskById(taskId));
+        }
+    };
+
+    // Обновление задачи
+    const handleUpdateTask = async (e) => {
         e.preventDefault();
-        setError(null);
-        setSuccess(false);
+        await dispatch(updateTaskById({
+            taskId: selectedTaskId,
+            taskUpdates: taskData,
+        }));
+        setSelectedTaskId(null); // Сброс после обновления
+    };
 
-        // Валидация
-        if (!user.surname || !user.name || !user.email || !user.age) {
-            setError('Заполните все обязательные поля');
-            return;
-        }
-
-        try {
-            // Отправляем массив пользователей (даже если один)
-            await dispatch(addUsersBatch([user]));
-            setSuccess(true);
-            setUser({
-                surname: '',
-                name: '',
-                patronymic: '',
-                role: 'STUDENT',
-                email: '',
-                age: '',
-                group_name: '',
-            });
-        } catch (err) {
-            setError(err.message || 'Ошибка при добавлении пользователя');
-        }
+    // Обработка изменения полей задачи
+    const handleTaskChange = (e) => {
+        const { name, value } = e.target;
+        setTaskData({ ...taskData, [name]: value });
     };
 
     return (
         <Box className={styles.container}>
             <Typography variant="h5" className={styles.title}>
-                Добавить нового пользователя
+                Управление заданиями
             </Typography>
-
-            {success && (
-                <Typography color="success" className={styles.successMsg}>
-                    Пользователь успешно добавлен!
-                </Typography>
-            )}
 
             {error && (
                 <Typography color="error" className={styles.errorMsg}>
@@ -83,95 +96,145 @@ const AddUsersForm = () => {
                 </Typography>
             )}
 
-            <form onSubmit={handleSubmit} className={styles.form}>
+            {isLoading && <Typography>Загрузка...</Typography>}
+
+            {/* Форма добавления задачи */}
+            <form onSubmit={handleAddTask} className={styles.form}>
                 <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12}>
                         <TextField
                             fullWidth
-                            label="Фамилия"
-                            name="surname"
-                            value={user.surname}
-                            onChange={handleChange}
+                            label="Название задачи"
+                            name="title"
+                            value={taskData.title}
+                            onChange={handleTaskChange}
                             required
                         />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Имя"
-                            name="name"
-                            value={user.name}
-                            onChange={handleChange}
-                            required
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Отчество"
-                            name="patronymic"
-                            value={user.patronymic}
-                            onChange={handleChange}
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth>
-                            <InputLabel>Роль</InputLabel>
-                            <Select
-                                name="role"
-                                value={user.role}
-                                onChange={handleChange}
-                            >
-                                <MenuItem value="STUDENT">Студент</MenuItem>
-                                <MenuItem value="TUTOR">Преподаватель</MenuItem>
-                                <MenuItem value="ADMIN">Администратор</MenuItem>
-                            </Select>
-                        </FormControl>
                     </Grid>
                     <Grid item xs={12}>
                         <TextField
                             fullWidth
-                            label="Электронная почта"
-                            name="email"
-                            type="email"
-                            value={user.email}
-                            onChange={handleChange}
+                            multiline
+                            rows={4}
+                            label="Описание"
+                            name="description"
+                            value={taskData.description}
+                            onChange={handleTaskChange}
                             required
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid item xs={12}>
                         <TextField
                             fullWidth
-                            label="Возраст"
-                            name="age"
-                            type="number"
-                            value={user.age}
-                            onChange={handleChange}
+                            label="Срок выполнения"
+                            name="deadline"
+                            type="date"
+                            value={taskData.deadline}
+                            onChange={handleTaskChange}
                             required
-                        />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            label="Название группы"
-                            name="group_name"
-                            value={user.group_name}
-                            onChange={handleChange}
                         />
                     </Grid>
                 </Grid>
-
                 <Button
                     type="submit"
                     variant="contained"
                     color="primary"
                     className={styles.submitButton}
                 >
-                    Добавить пользователя
+                    Добавить задание
                 </Button>
             </form>
+
+            {/* Список задач */}
+            <Typography variant="h6" mt={3}>
+                Список заданий
+            </Typography>
+            {tasks.map(task => (
+                <Box key={task.id} mt={1} p={1} border="1px solid #ddd">
+                    <Typography>
+                        {task.title} (срок: {task.deadline})
+                    </Typography>
+                    <Typography variant="body2">
+                        {task.description}
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleViewTask(task.id)}
+                    >
+                        Просмотреть
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        color="warning"
+                        onClick={() => handleDeleteTask(task.id)}
+                    >
+                        Удалить
+                    </Button>
+                </Box>
+            ))}
+
+            {/* Форма редактирования задачи */}
+            {selectedTaskId && (
+                <Box mt={3}>
+                    <Typography variant="h6">Редактирование задания</Typography>
+                    <form onSubmit={handleUpdateTask}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Название задачи"
+                                    name="title"
+                                    value={taskData.title}
+                                    onChange={handleTaskChange}
+                                    required
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    rows={4}
+                                    label="Описание"
+                                    name="description"
+                                    value={taskData.description}
+                                    onChange={handleTaskChange}
+                                    required
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label="Срок выполнения"
+                                    name="deadline"
+                                    type="date"
+                                    value={taskData.deadline}
+                                    onChange={handleTaskChange}
+                                    required
+                                />
+                            </Grid>
+                        </Grid>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            className={styles.submitButton}
+                        >
+                            Обновить задание
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="secondary"
+                            onClick={() => setSelectedTaskId(null)}
+                        >
+                            Отмена
+                        </Button>
+                    </form>
+                </Box>
+            )}
         </Box>
     );
 };
 
-export default AddUsersForm;
+export default TasksManager;

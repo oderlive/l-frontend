@@ -1,6 +1,8 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider as MenuProvider } from './context/MenuContext';
+import { Link } from 'react-router-dom';
+
 import {
     Box,
     Grid,
@@ -28,6 +30,8 @@ const Archive = lazy(() => import('./pages/Archive/Archive'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
 
 function App() {
+
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [selectedComponent, setSelectedComponent] = useState(null);
     const [courses, setCourses] = useState([]); // Состояние для хранения курсов
     const [loading, setLoading] = useState(true); // Состояние загрузки
@@ -72,7 +76,7 @@ function App() {
                                             <Route path="/profile-tile" element={<ProfileTile name="test test" tasks={tasks} />} />
                                             <Route path="/archive" element={<Archive/>} />
                                             <Route path="/settings" element={<Settings/>} />
-                                            <Route path="/course" element={<Course/>} />
+                                            <Route path="/course/:courseId" element={<Course />} />
                                             <Route path="/file-course" element={<FileCourse/>} />
                                             <Route path="/manage-users" element={<ManageUsers/>} />
                                             <Route path="/statistics" element={<Statistics/>} />
@@ -87,16 +91,17 @@ function App() {
                                                     }}
                                                     className={styles.tileContainer}
                                                 >
-                                                    {/* Заменяем mockData на courses */}
                                                     {courses.map((course, index) => (
-                                                        <Tile
-                                                            key={index}
-                                                            course={course.name}
-                                                            name={course.creator.name}
-                                                            surname={course.creator.surname}
-                                                            imageUrl={avatar}
-                                                        />
+                                                        <Link to={`/course/${course.id}`} key={course.id}>
+                                                            <Tile
+                                                                course={course.name}
+                                                                name={course.creator.name}
+                                                                surname={course.creator.surname}
+                                                                imageUrl={avatar}
+                                                            />
+                                                        </Link>
                                                     ))}
+
                                                 </Box>
                                             } />
                                         </Routes>
