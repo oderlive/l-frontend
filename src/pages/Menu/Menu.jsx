@@ -73,6 +73,13 @@ const Menu = ({ setSelectedComponent }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    useEffect(() => {
+        loadInstitutions();
+        const intervalId = setInterval(loadInstitutions, 60000);
+        return () => clearInterval(intervalId);
+    }, []);
+
+
     // Загрузка учреждений
     const loadInstitutions = async () => {
         setFetchLoading(true);
@@ -498,9 +505,9 @@ const Menu = ({ setSelectedComponent }) => {
             <span className={styles.title} onClick={() => navigate('/archive')}>
         <Button size="small">Архив</Button>
       </span>
-            <span className={styles.title} onClick={() => navigate('/manage-users')}>
-        <Button size="small">Управлять пользователями</Button>
-      </span>
+      {/*      <span className={styles.title} onClick={() => navigate('/manage-users')}>*/}
+      {/*  <Button size="small">Управлять пользователями</Button>*/}
+      {/*</span>*/}
             <span className={styles.title} onClick={() => navigate('/statistics')}>
         <Button size="small">Статистика</Button>
       </span>

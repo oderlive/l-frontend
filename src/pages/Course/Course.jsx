@@ -10,7 +10,7 @@ const Course = () => {
     return (
         <div>
             <Tasks courseId={courseId} />
-            <Solutions />
+            <Solutions courseId={courseId} />
         </div>
     );
 };

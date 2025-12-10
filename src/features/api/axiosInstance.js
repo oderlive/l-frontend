@@ -12,14 +12,14 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 403) {
-            console.log('[403] Пользователь разлогинен автоматически');
-            localStorage.removeItem('user_id');
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('is_tfa_enabled');
-            store.dispatch(logout());
-        }
+        // if (error.response && error.response.status === 403) {
+        //     console.log('[403] Пользователь разлогинен автоматически');
+        //     localStorage.removeItem('user_id');
+        //     localStorage.removeItem('access_token');
+        //     localStorage.removeItem('refresh_token');
+        //     localStorage.removeItem('is_tfa_enabled');
+        //     store.dispatch(logout());
+        // }
         return Promise.reject(error);
     }
 );

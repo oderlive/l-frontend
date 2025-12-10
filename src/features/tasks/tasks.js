@@ -1,6 +1,7 @@
 import axiosInstance from "../api/axiosInstance";
 import { ENDPOINTS } from "../api/endpoints";
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 const getUserIdFromStorage = () => {
     const userId = localStorage.getItem("user_id");
@@ -113,11 +114,11 @@ export const updateTaskById = createAsyncThunk(
             const config = {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
+                    "Content-Type": "multipart/form-data",
                 },
             };
 
-            const response = await axiosInstance.patch(
+            const response = await axios.patch(
                 `${ENDPOINTS.TASKS}/${taskId}`,
                 updatedTaskData,
                 config

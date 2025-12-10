@@ -2,14 +2,14 @@ import { createSlice } from '@reduxjs/toolkit';
 import * as solutionsActions from './solutions';
 
 const initialState = {
-    solution: null, // текущее решение (для операций GET/UPDATE/DELETE по ID)
-    solutions: [], // список решений (для операций LIST)
-    loading: false, // флаг загрузки
-    error: null, // ошибка при выполнении операций
+    solution: null, // текущее решение (по ID)
+    solutions: [], // все решения (например, по заданию)
+    loading: false,
+    error: null,
     reviewedSolutions: [], // проверенные решения
     unreviewedSolutions: [], // непроверенные решения
-    userSolutions: [], // решения текущего пользователя
-    batchSolutions: [], // пакетные решения (всех студентов)
+    userSolutions: [], // решения пользователя
+    batchSolutions: [], // решения всех студентов по заданию
     courseSolutions: [], // решения по курсу
 };
 
@@ -18,7 +18,7 @@ const solutionsSlice = createSlice({
     initialState,
     reducers: {},
     extraReducers: (builder) => {
-        // Отзыв решения (POST /solutions/{solutionId}/revoke)
+        // Отзыв решения (POST /solutions/{id}/revoke)
         builder
             .addCase(solutionsActions.revokeSolution.pending, (state) => {
                 state.loading = true;
@@ -26,17 +26,16 @@ const solutionsSlice = createSlice({
             })
             .addCase(solutionsActions.revokeSolution.fulfilled, (state, action) => {
                 state.loading = false;
-                // Логика обновления состояния после отзыва решения (при необходимости)
-                state.solutions = state.solutions.filter(
-                    (solution) => solution.id !== action.payload.id
-                );
+                const id = action.payload.id;
+                state.solutions = state.solutions.filter((sol) => sol.id !== id);
+                state.reviewedSolutions = state.reviewedSolutions.filter((sol) => sol.id !== id);
             })
             .addCase(solutionsActions.revokeSolution.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });
 
-        // Проверка решения (POST /solutions/{solutionId}/review)
+        // Проверка решения (POST /solutions/{id}/review)
         builder
             .addCase(solutionsActions.reviewSolution.pending, (state) => {
                 state.loading = true;
@@ -44,13 +43,19 @@ const solutionsSlice = createSlice({
             })
             .addCase(solutionsActions.reviewSolution.fulfilled, (state, action) => {
                 state.loading = false;
-                // Обновление статуса решения после проверки
-                const reviewedSolution = action.payload;
-                state.solutions = state.solutions.map((solution) =>
-                    solution.id === reviewedSolution.id ? reviewedSolution : solution
+                const reviewedSol = action.payload;
+                // Обновляем в общем списке
+                state.solutions = state.solutions.map((sol) =>
+                    sol.id === reviewedSol.id ? reviewedSol : sol
                 );
-                // Перемещение решения в список проверенных
-                state.reviewedSolutions.push(reviewedSolution);
+                // Добавляем в проверенные, если ещё нет
+                if (!state.reviewedSolutions.some((sol) => sol.id === reviewedSol.id)) {
+                    state.reviewedSolutions.push(reviewedSol);
+                }
+                // Удаляем из непроверенных
+                state.unreviewedSolutions = state.unreviewedSolutions.filter(
+                    (sol) => sol.id !== reviewedSol.id
+                );
             })
             .addCase(solutionsActions.reviewSolution.rejected, (state, action) => {
                 state.loading = false;
@@ -65,16 +70,17 @@ const solutionsSlice = createSlice({
             })
             .addCase(solutionsActions.addSolution.fulfilled, (state, action) => {
                 state.loading = false;
-                state.solution = action.payload;
-                state.solutions.push(action.payload);
-                state.unreviewedSolutions.push(action.payload); // новое решение по умолчанию непроверенное
+                const newSolution = action.payload;
+                state.solution = newSolution;
+                state.solutions.push(newSolution);
+                state.unreviewedSolutions.push(newSolution); // новое решение — непроверенное
             })
             .addCase(solutionsActions.addSolution.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });
 
-        // Получение информации о решении (GET /solutions/{solutionId})
+        // Получение решения по ID (GET /solutions/{id})
         builder
             .addCase(solutionsActions.getSolutionById.pending, (state) => {
                 state.loading = true;
@@ -89,7 +95,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Удаление решения (DELETE /solutions/{solutionId})
+        // Удаление решения (DELETE /solutions/{id})
         builder
             .addCase(solutionsActions.deleteSolution.pending, (state) => {
                 state.loading = true;
@@ -97,23 +103,20 @@ const solutionsSlice = createSlice({
             })
             .addCase(solutionsActions.deleteSolution.fulfilled, (state, action) => {
                 state.loading = false;
-                state.solutions = state.solutions.filter(
-                    (solution) => solution.id !== action.payload.id
-                );
-                state.reviewedSolutions = state.reviewedSolutions.filter(
-                    (solution) => solution.id !== action.payload.id
-                );
-                state.unreviewedSolutions = state.unreviewedSolutions.filter(
-                    (solution) => solution.id !== action.payload.id
-                );
-                state.solution = null;
+                const id = action.payload.id || action.meta.arg; // можно передать ID через arg
+                state.solutions = state.solutions.filter((sol) => sol.id !== id);
+                state.reviewedSolutions = state.reviewedSolutions.filter((sol) => sol.id !== id);
+                state.unreviewedSolutions = state.unreviewedSolutions.filter((sol) => sol.id !== id);
+                if (state.solution?.id === id) {
+                    state.solution = null;
+                }
             })
             .addCase(solutionsActions.deleteSolution.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });
 
-        // Обновление решения (PATCH /solutions/{solutionId})
+        // Обновление решения (PATCH /solutions/{id})
         builder
             .addCase(solutionsActions.updateSolution.pending, (state) => {
                 state.loading = true;
@@ -121,11 +124,25 @@ const solutionsSlice = createSlice({
             })
             .addCase(solutionsActions.updateSolution.fulfilled, (state, action) => {
                 state.loading = false;
-                const updatedSolution = action.payload;
-                state.solutions = state.solutions.map((solution) =>
-                    solution.id === updatedSolution.id ? updatedSolution : solution
-                );
-                state.solution = updatedSolution;
+                const updated = action.payload;
+                state.solution = updated;
+                state.solutions = state.solutions.map((sol) => (sol.id === updated.id ? updated : sol));
+
+                // Перемещение между списками в зависимости от isReviewed
+                const wasReviewed = state.reviewedSolutions.some((sol) => sol.id === updated.id);
+                const isNowReviewed = updated.isReviewed;
+
+                if (isNowReviewed && !wasReviewed) {
+                    state.reviewedSolutions.push(updated);
+                    state.unreviewedSolutions = state.unreviewedSolutions.filter(
+                        (sol) => sol.id !== updated.id
+                    );
+                } else if (!isNowReviewed && wasReviewed) {
+                    state.unreviewedSolutions.push(updated);
+                    state.reviewedSolutions = state.reviewedSolutions.filter(
+                        (sol) => sol.id !== updated.id
+                    );
+                }
             })
             .addCase(solutionsActions.updateSolution.rejected, (state, action) => {
                 state.loading = false;
@@ -147,7 +164,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение решений всех студентов для задания (GET /solutions/task/{taskId}/batch)
+        // Получение всех решений по заданию (GET /solutions/task/{taskId}/batch)
         builder
             .addCase(solutionsActions.getBatchSolutionsForTask.pending, (state) => {
                 state.loading = true;
@@ -158,11 +175,11 @@ const solutionsSlice = createSlice({
                 state.batchSolutions = action.payload;
             })
             .addCase(solutionsActions.getBatchSolutionsForTask.rejected, (state, action) => {
-            state.loading = false;
-            state.error = action.payload;
-        });
+                state.loading = false;
+                state.error = action.payload;
+            });
 
-        // Получение НЕПРОВЕРЕННЫХ решений для задания (GET /solutions/task/{taskId}/batch/unreviewed)
+        // Получение НЕПРОВЕРЕННЫХ решений по заданию (GET /solutions/task/{taskId}/batch/unreviewed)
         builder
             .addCase(solutionsActions.getUnreviewedBatchSolutionsForTask.pending, (state) => {
                 state.loading = true;
@@ -177,7 +194,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение ПРОВЕРЕННЫХ решений для задания (GET /solutions/task/{taskId}/batch/reviewed)
+        // Получение ПРОВЕРЕННЫХ решений по заданию (GET /solutions/task/{taskId}/batch/reviewed)
         builder
             .addCase(solutionsActions.getReviewedBatchSolutionsForTask.pending, (state) => {
                 state.loading = true;
@@ -207,7 +224,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение НЕПРОВЕРЕННЫХ решений пользователя в курсе (GET /solutions/course/{courseId}/user/{userId}/batch/unreviewed)
+        // Получение НЕПРОВЕРЕННЫХ решений пользователя в курсе
         builder
             .addCase(solutionsActions.getUnreviewedUserSolutionsForCourse.pending, (state) => {
                 state.loading = true;
@@ -222,7 +239,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение ПРОВЕРЕННЫХ решений пользователя в курсе (GET /solutions/course/{courseId}/user/{userId}/batch/reviewed)
+        // Получение ПРОВЕРЕННЫХ решений пользователя в курсе
         builder
             .addCase(solutionsActions.getReviewedUserSolutionsForCourse.pending, (state) => {
                 state.loading = true;
@@ -237,7 +254,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение решений участников курса (GET /solutions/course/{courseId}/batch)
+        // Получение всех решений участников курса
         builder
             .addCase(solutionsActions.getBatchSolutionsForCourse.pending, (state) => {
                 state.loading = true;
@@ -252,7 +269,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение НЕПРОВЕРЕННЫХ решений участников курса (GET /solutions/course/{courseId}/batch/unreviewed)
+        // Получение НЕПРОВЕРЕННЫХ решений участников курса
         builder
             .addCase(solutionsActions.getUnreviewedBatchSolutionsForCourse.pending, (state) => {
                 state.loading = true;
@@ -267,7 +284,7 @@ const solutionsSlice = createSlice({
                 state.error = action.payload;
             });
 
-        // Получение ПРОВЕРЕННЫХ решений участников курса (GET /solutions/course/{courseId}/batch/reviewed)
+        // Получение ПРОВЕРЕННЫХ решений участников курса
         builder
             .addCase(solutionsActions.getReviewedBatchSolutionsForCourse.pending, (state) => {
                 state.loading = true;
@@ -284,16 +301,16 @@ const solutionsSlice = createSlice({
     },
 });
 
-// Экспорт селекторов
-export const selectSolution = (state) => state.solutions.solution;
+// 🔽 СЕЛЕКТОРЫ — теперь экспортируются и доступны
 export const selectSolutions = (state) => state.solutions.solutions;
-export const selectIsLoading = (state) => state.solutions.loading;
-export const selectError = (state) => state.solutions.error;
 export const selectReviewedSolutions = (state) => state.solutions.reviewedSolutions;
 export const selectUnreviewedSolutions = (state) => state.solutions.unreviewedSolutions;
 export const selectUserSolutions = (state) => state.solutions.userSolutions;
 export const selectBatchSolutions = (state) => state.solutions.batchSolutions;
 export const selectCourseSolutions = (state) => state.solutions.courseSolutions;
+export const selectCurrentSolution = (state) => state.solutions.solution;
+export const selectIsLoading = (state) => state.solutions.loading;
+export const selectError = (state) => state.solutions.error;
 
-// Экспорт редьюсера
+// Экспорт редьюсера по умолчанию
 export default solutionsSlice.reducer;

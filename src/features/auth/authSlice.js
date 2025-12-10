@@ -183,6 +183,7 @@ const authSlice = createSlice({
 
 // Экспортируем редьюсеры
 export const { updateAuthState, clearError } = authSlice.actions;
+export const selectAuth = (state) => state.auth;
 
 // Экспортируем редуктор
 export default authSlice.reducer;

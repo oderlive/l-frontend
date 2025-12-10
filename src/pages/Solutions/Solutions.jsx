@@ -20,26 +20,27 @@ import {
     Tab,
     Alert,
     CircularProgress,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useDispatch, useSelector } from "react-redux";
 
 // Импортируем селекторы и экшены
 import {
-    selectError,
-    selectIsLoading,
     selectReviewedSolutions,
-    selectSolutions,
     selectUnreviewedSolutions,
+    selectSolutions,
+    selectIsLoading,
+    selectError,
 } from "../../features/solution/solutionsSlice";
 import * as solutionsActions from "../../features/solution/solutions";
-import {ENDPOINTS} from "../../features/api/endpoints";
 
-
-// Стилизованный контейнер
 const StyledPaper = styled(Paper)(({ theme }) => ({
     padding: theme.spacing(3),
     marginTop: theme.spacing(4),
@@ -48,26 +49,20 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
     boxShadow: theme.shadows[3],
 }));
 
-// Стилизованная кнопка проверки
 const ReviewButton = styled(Button)(({ theme }) => ({
     backgroundColor: "#4caf50",
     color: "#fff",
-    "&:hover": {
-        backgroundColor: "#388e3c",
-    },
+    "&:hover": { backgroundColor: "#388e3c" },
     marginRight: theme.spacing(1),
 }));
 
-// Стилизованная кнопка отзыва
 const RevokeButton = styled(Button)(({ theme }) => ({
     backgroundColor: "#f44336",
     color: "#fff",
-    "&:hover": {
-        backgroundColor: "#d32f2f",
-    },
+    "&:hover": { backgroundColor: "#d32f2f" },
 }));
 
-const Solutions = () => {
+const Solutions = ({ courseId }) => {
     const dispatch = useDispatch();
 
     // Состояние из Redux
@@ -79,50 +74,86 @@ const Solutions = () => {
 
     // Локальное состояние
     const [selectedSolution, setSelectedSolution] = useState(null);
-    const [openDialog, setOpenDialog] = useState(false);
     const [reviewComment, setReviewComment] = useState("");
-    const [activeTab, setActiveTab] = useState(0); // 0: все, 1: проверенные, 2: непроверенные
+    const [reviewScore, setReviewScore] = useState(10);
+    const [activeTab, setActiveTab] = useState(0);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [expandedFile, setExpandedFile] = useState(null); // для раскрытия содержимого файла
 
-    // Получаем courseId извне (в реальности — из useParams или props)
-    const courseId = "course_123"; // ← Заменить на пропс или из store
+    // Загрузка решений при изменении вкладки
+    useEffect(() => {
+        if (!courseId) return;
 
+        let promise;
+        switch (activeTab) {
+            case 1:
+                promise = dispatch(solutionsActions.getReviewedBatchSolutionsForCourse(courseId));
+                break;
+            case 2:
+                promise = dispatch(solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId));
+                break;
+            default:
+                promise = dispatch(solutionsActions.getBatchSolutionsForCourse(courseId));
+        }
 
+        return () => {
+            if (promise && typeof promise.abort === "function") {
+                promise.abort();
+            }
+        };
+    }, [dispatch, courseId, activeTab]);
 
+    // Открытие диалога проверки
     const handleReview = (solution) => {
-        if (!solution) return;
         setSelectedSolution(solution);
         setReviewComment(solution.feedback || "");
+        setReviewScore(solution.score || 10);
+        setExpandedFile(null); // сброс
         setOpenDialog(true);
     };
 
+    // Отправка проверки
     const handleSubmitReview = async () => {
         if (!selectedSolution) return;
 
         try {
-            await dispatch(solutionsActions.reviewSolution(selectedSolution.id)).unwrap();
-            // Обновляем данные после успешной проверки
-            dispatch(solutionsActions.getSolutionById(selectedSolution.id));
+            await dispatch(
+                solutionsActions.reviewSolution({
+                    solutionId: selectedSolution.id,
+                    feedback: reviewComment,
+                    score: reviewScore,
+                })
+            ).unwrap();
+
+            // Обновляем данные
+            dispatch(solutionsActions.getReviewedBatchSolutionsForCourse(courseId));
+            dispatch(solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId));
             dispatch(solutionsActions.getBatchSolutionsForCourse(courseId));
+
             setOpenDialog(false);
             setReviewComment("");
+            setReviewScore(10);
         } catch (err) {
-            console.error("Ошибка при проверке решения:", err);
-            // Ошибка уже в store
+            console.error("❌ Ошибка при проверке решения:", err);
         }
     };
 
+    // Отзыв проверки
     const handleRevoke = async (solutionId) => {
         if (!window.confirm("Вы уверены, что хотите отозвать проверку этого решения?")) return;
 
         try {
             await dispatch(solutionsActions.revokeSolution(solutionId)).unwrap();
-            dispatch(solutionsActions.getSolutionById(solutionId));
+
+            dispatch(solutionsActions.getReviewedBatchSolutionsForCourse(courseId));
+            dispatch(solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId));
             dispatch(solutionsActions.getBatchSolutionsForCourse(courseId));
         } catch (err) {
-            console.error("Ошибка при отзыве проверки:", err);
+            console.error("❌ Ошибка при отзыве проверки:", err);
         }
     };
 
+    // Форматирование даты
     const formatDate = (isoString) => {
         try {
             return new Date(isoString).toLocaleString("ru-RU");
@@ -143,16 +174,20 @@ const Solutions = () => {
         }
     }, [solutions, reviewedSolutions, unreviewedSolutions, activeTab]);
 
-    // Проверка ENDPOINTS на этапе рендера
-    if (!ENDPOINTS?.SOLUTIONS) {
-        return (
-            <Box sx={{ padding: 3 }}>
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    Конфигурация API не загружена. Проверьте файл <code>config/endpoints.js</code>.
-                </Alert>
-            </Box>
-        );
-    }
+    // Загрузка содержимого файла (если текстовый)
+    const loadFileContent = async (file) => {
+        if (!file.url) {
+            return "Файл недоступен.";
+        }
+
+        try {
+            const res = await fetch(file.url);
+            const text = await res.text();
+            return text;
+        } catch (err) {
+            return "Не удалось загрузить содержимое файла.";
+        }
+    };
 
     return (
         <Box sx={{ padding: 3 }}>
@@ -173,7 +208,7 @@ const Solutions = () => {
                     </Box>
                 ) : error ? (
                     <Alert severity="error" sx={{ mb: 2 }}>
-                        Ошибка: {error}
+                        Ошибка: {typeof error === "string" ? error : JSON.stringify(error)}
                     </Alert>
                 ) : (
                     <List>
@@ -200,6 +235,14 @@ const Solutions = () => {
                                                     <Typography component="span" variant="body2" color="textSecondary">
                                                         Отправлено: {formatDate(solution.submittedAt)}
                                                     </Typography>
+                                                    {solution.reviewed && (
+                                                        <>
+                                                            <br />
+                                                            <Typography component="span" variant="body2" color="textSecondary">
+                                                                Оценка: {solution.score}/10
+                                                            </Typography>
+                                                        </>
+                                                    )}
                                                     <br />
                                                     <Chip
                                                         size="small"
@@ -207,6 +250,13 @@ const Solutions = () => {
                                                         color={solution.reviewed ? "success" : "default"}
                                                         sx={{ mt: 1 }}
                                                     />
+                                                    {solution.content && solution.content.length > 0 && (
+                                                        <Box mt={1}>
+                                                            <Typography variant="caption" color="textSecondary">
+                                                                Файлы: {solution.content.map((f) => f.original_file_name).join(", ")}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
                                                 </Box>
                                             }
                                         />
@@ -255,29 +305,62 @@ const Solutions = () => {
                                 Отправлено: {formatDate(selectedSolution.submittedAt)}
                             </Typography>
 
+                            {/* Список файлов */}
                             <Box mt={2} mb={2}>
-                                <Typography variant="subtitle2" fontWeight="bold">
-                                    Код решения:
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                    Приложенные файлы:
                                 </Typography>
-                                <Paper
-                                    variant="outlined"
-                                    sx={{
-                                        p: 2,
-                                        fontFamily: "monospace",
-                                        backgroundColor: "#f5f5f5",
-                                        maxHeight: 300,
-                                        overflow: "auto",
-                                    }}
-                                >
-                                    {selectedSolution.code ? (
-                                        <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                      {selectedSolution.code}
-                    </pre>
-                                    ) : (
-                                        "Код не загружен"
-                                    )}
-                                </Paper>
+                                {selectedSolution.content && selectedSolution.content.length > 0 ? (
+                                    selectedSolution.content.map((file) => (
+                                        <Accordion
+                                            key={file.id}
+                                            expanded={expandedFile === file.id}
+                                            onChange={() => setExpandedFile(expandedFile === file.id ? null : file.id)}
+                                        >
+                                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                                <Typography variant="body2">{file.original_file_name}</Typography>
+                                            </AccordionSummary>
+                                            <AccordionDetails>
+                                                <Paper
+                                                    variant="outlined"
+                                                    sx={{
+                                                        p: 2,
+                                                        fontFamily: "monospace",
+                                                        backgroundColor: "#f5f5f5",
+                                                        maxHeight: 300,
+                                                        overflow: "auto",
+                                                    }}
+                                                >
+                                                    <Typography variant="caption" color="textSecondary" gutterBottom>
+                                                        Загрузка содержимого...
+                                                    </Typography>
+                                                    {/* Здесь можно добавить fetch-логику, если файлы доступны по URL */}
+                                                    {/* Пример: <pre>{await loadFileContent(file)}</pre> */}
+                                                    {/* Пока заглушка */}
+                                                    <Typography variant="body2" color="textSecondary">
+                                                        Предпросмотр файлов временно недоступен. Файл: {file.original_file_name}
+                                                    </Typography>
+                                                </Paper>
+                                            </AccordionDetails>
+                                        </Accordion>
+                                    ))
+                                ) : (
+                                    <Typography variant="body2" color="textSecondary">
+                                        Нет приложенных файлов.
+                                    </Typography>
+                                )}
                             </Box>
+
+                            <TextField
+                                label="Оценка (от 0 до 10)"
+                                type="number"
+                                inputProps={{ min: 0, max: 10 }}
+                                fullWidth
+                                value={reviewScore}
+                                onChange={(e) => setReviewScore(Number(e.target.value))}
+                                variant="outlined"
+                                sx={{ mb: 2 }}
+                            />
 
                             <TextField
                                 label="Комментарий к проверке"
@@ -287,7 +370,6 @@ const Solutions = () => {
                                 value={reviewComment}
                                 onChange={(e) => setReviewComment(e.target.value)}
                                 variant="outlined"
-                                sx={{ mt: 1 }}
                             />
                         </>
                     )}

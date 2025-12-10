@@ -1,6 +1,6 @@
-import axiosInstance from "../api/axiosInstance";
 import { ENDPOINTS } from "../api/endpoints";
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
 // Отзыв решения по ID (POST /solutions/{solutionId}/revoke)
 export const revokeSolution = createAsyncThunk(
@@ -18,7 +18,7 @@ export const revokeSolution = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.post(
+            const response = await axios.post(
                 `${ENDPOINTS.SOLUTIONS}/${solutionId}/revoke`,
                 null,
                 config
@@ -46,7 +46,7 @@ export const reviewSolution = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.post(
+            const response = await axios.post(
                 `${ENDPOINTS.SOLUTIONS}/${solutionId}/review`,
                 null,
                 config
@@ -71,11 +71,11 @@ export const addSolution = createAsyncThunk(
             const config = {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
+                    "Content-Type": "multipart/form-data",
                 },
             };
 
-            const response = await axiosInstance.post(
+            const response = await axios.post(
                 `${ENDPOINTS.SOLUTIONS}/task/${taskId}`,
                 solutionData,
                 config
@@ -103,7 +103,7 @@ export const getSolutionById = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/${solutionId}`,
                 config
             );
@@ -130,7 +130,7 @@ export const deleteSolution = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.delete(
+            const response = await axios.delete(
                 `${ENDPOINTS.SOLUTIONS}/${solutionId}`,
                 config
             );
@@ -154,11 +154,11 @@ export const updateSolution = createAsyncThunk(
             const config = {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": `application/json`,
+                    "Content-Type": "application/json",
                 },
             };
 
-            const response = await axiosInstance.patch(
+            const response = await axios.patch(
                 `${ENDPOINTS.SOLUTIONS}/${solutionId}`,
                 updatedSolutionData,
                 config
@@ -186,7 +186,7 @@ export const getUserSolutionsForTask = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/task/${taskId}/user/${userId}`,
                 config
             );
@@ -213,7 +213,7 @@ export const getBatchSolutionsForTask = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/task/${taskId}/batch`,
                 config
             );
@@ -240,7 +240,7 @@ export const getUnreviewedBatchSolutionsForTask = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/task/${taskId}/batch/unreviewed`,
                 config
             );
@@ -267,7 +267,7 @@ export const getReviewedBatchSolutionsForTask = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/task/${taskId}/batch/reviewed`,
                 config
             );
@@ -294,7 +294,7 @@ export const getUserSolutionsForCourse = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/course/${courseId}/user/${userId}/batch`,
                 config
             );
@@ -321,7 +321,7 @@ export const getUnreviewedUserSolutionsForCourse = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/course/${courseId}/user/${userId}/batch/unreviewed`,
                 config
             );
@@ -348,7 +348,7 @@ export const getReviewedUserSolutionsForCourse = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/course/${courseId}/user/${userId}/batch/reviewed`,
                 config
             );
@@ -375,7 +375,7 @@ export const getBatchSolutionsForCourse = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/course/${courseId}/batch`,
                 config
             );
@@ -402,7 +402,7 @@ export const getUnreviewedBatchSolutionsForCourse = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/course/${courseId}/batch/unreviewed`,
                 config
             );
@@ -429,7 +429,7 @@ export const getReviewedBatchSolutionsForCourse = createAsyncThunk(
                 },
             };
 
-            const response = await axiosInstance.get(
+            const response = await axios.get(
                 `${ENDPOINTS.SOLUTIONS}/course/${courseId}/batch/reviewed`,
                 config
             );

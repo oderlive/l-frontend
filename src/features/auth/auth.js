@@ -142,20 +142,23 @@ export const sendMailForTfaSecretReset = createAsyncThunk(
 // Отправка письма для сброса пароля
 export const sendMailForPasswordReset = createAsyncThunk(
     'auth/sendMailForPasswordReset',
-    async (email) => {
+    async ({ email }, { rejectWithValue }) => {
         try {
-            const config = getAuthHeaders(); // Добавляем заголовки с токеном
-            const response = await axios.post(
-                ENDPOINTS.SEND_MAIL_FOR_PASSWORD_RESET,
-                { email },
-                config
-            );
+            // Формируем URL с query-параметром: ?email=user@example.com
+            const url = `${ENDPOINTS.SEND_MAIL_FOR_PASSWORD_RESET}?email=${encodeURIComponent(email)}`;
+
+            const config = getAuthHeaders(); // Добавляем заголовки (например, Authorization)
+
+            // Убираем тело запроса — данные в URL
+            const response = await axios.post(url, null, config);
+
             return response.data;
         } catch (error) {
-            throw error;
+            return rejectWithValue(error.response?.data?.message || error.message);
         }
     }
 );
+
 
 // Сброс TFA
 export const resetTfa = createAsyncThunk(

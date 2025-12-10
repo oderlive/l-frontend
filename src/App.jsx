@@ -21,10 +21,11 @@ import ProfileTile from "./pages/ProfileTile/ProfileTile";
 import FileCourse from "./pages/FileCourse/FileCourse";
 import Course from "./pages/Course/Course";
 import {getCoursesByUser} from "./features/course/courses";
-import ManageUsers from "./pages/ManageUser/ManageUsers";
 import Statistics from "./pages/Statistics/Statistics";
 import RewardsPage from "./pages/Rewards/Rewards";
 import Rewards from "./pages/Rewards/Rewards";
+import ResetPasswordPage from "./pages/Settings/ResetPasswordPage";
+import ResetTfaPage from "./pages/Settings/ResetTfaPage";
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
@@ -78,9 +79,10 @@ function App() {
                                             <Route path="/settings" element={<Settings/>} />
                                             <Route path="/course/:courseId" element={<Course />} />
                                             <Route path="/file-course" element={<FileCourse/>} />
-                                            <Route path="/manage-users" element={<ManageUsers/>} />
                                             <Route path="/statistics" element={<Statistics/>} />
                                             <Route path="/rewards" element={<Rewards/>} />
+                                            <Route path="/reset-password" element={<ResetPasswordPage />} />
+                                            <Route path="/reset-tfa" element={<ResetTfaPage />} />
                                             <Route path="/" element={
                                                 <Box
                                                     sx={{
