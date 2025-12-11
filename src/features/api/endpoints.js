@@ -17,6 +17,6 @@ export const ENDPOINTS = {
     USERS: `${BASE_URL}/users`,
     COURSES: `${BASE_URL}/courses`,
     TASKS: `${BASE_URL}/tasks`,
-    COMMENTS: `${BASE_URL}/comments`,
+    COMMENTS: `${BASE_URL}`,
     SOLUTIONS: `${BASE_URL}/solutions`,
 };

@@ -26,6 +26,7 @@ import RewardsPage from "./pages/Rewards/Rewards";
 import Rewards from "./pages/Rewards/Rewards";
 import ResetPasswordPage from "./pages/Settings/ResetPasswordPage";
 import ResetTfaPage from "./pages/Settings/ResetTfaPage";
+import ManageUsers from "./pages/ManageUsers/ManageUsers";
 
 const Archive = lazy(() => import('./pages/Archive/Archive'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
@@ -83,6 +84,7 @@ function App() {
                                             <Route path="/rewards" element={<Rewards/>} />
                                             <Route path="/reset-password" element={<ResetPasswordPage />} />
                                             <Route path="/reset-tfa" element={<ResetTfaPage />} />
+                                            <Route path="/manage-users" element={<ManageUsers />} />
                                             <Route path="/" element={
                                                 <Box
                                                     sx={{

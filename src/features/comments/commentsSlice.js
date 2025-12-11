@@ -29,8 +29,21 @@ const commentsSlice = createSlice({
         });
         builder.addCase(getTaskComments.fulfilled, (state, action) => {
             state.loading = false;
-            state.taskComments[action.meta.arg] = action.payload;
+
+            // Нормализуем поля: text → content, published_at → timestamp, author.id → user_id
+            const normalizedComments = action.payload.map(comment => ({
+                id: comment.id,
+                user_id: comment.author.id,
+                content: comment.text,
+                timestamp: comment.published_at,
+                author: comment.author
+            }));
+
+            state.taskComments[action.meta.arg] = normalizedComments;
+            console.log(normalizedComments)
         });
+
+
         builder.addCase(getTaskComments.rejected, (state, action) => {
             state.loading = false;
             state.error = action.payload;
@@ -123,7 +136,9 @@ const commentsSlice = createSlice({
 });
 
 // Экспорт селекторов
-export const selectTaskComments = (state, taskId) => state.comments.taskComments[taskId] || [];
+export const selectTaskComments = (state, taskId) => {
+    return state.comments.taskComments[taskId] || [];
+};
 export const selectSolutionComments = (state, solutionId) => state.comments.solutionComments[solutionId] || [];
 export const selectCommentsLoading = (state) => state.comments.loading;
 export const selectCommentsError = (state) => state.comments.error;

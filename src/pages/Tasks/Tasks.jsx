@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Box,
     Button,
@@ -18,24 +18,26 @@ import {
     Snackbar,
     Alert,
     Paper,
-    List,
-    ListItem,
-    ListItemText,
-    IconButton, TextField,
+    TextField,
+    InputAdornment,
 } from '@mui/material';
+import { AddComment as AddCommentIcon, ExpandMore, ExpandLess, Delete as DeleteIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectError, selectIsLoading, selectTasks } from '../../features/tasks/tasksSlice';
 import * as tasksActions from '../../features/tasks/tasks';
 import * as solutionsActions from '../../features/solution/solutions';
-import { v4 as uuidv4 } from 'uuid'; // для генерации UUID
+import { v4 as uuidv4 } from 'uuid';
+import { getTasksByCourseAndUserId, getTasksByCourseId } from '../../features/tasks/tasks';
+import { fetchUserInstitution } from '../../features/users/usersSlice';
+import { selectTasks, selectIsLoading, selectError } from '../../features/tasks/tasksSlice';
+import TaskItem from './TaskItem'; // ✅ Импорт компонента с комментариями
 
 const Tasks = ({ courseId }) => {
     const dispatch = useDispatch();
 
-    // Получаем данные из Redux-стора
+    // Состояние из Redux
     const tasks = useSelector(selectTasks);
-    const isLoading = useSelector(selectIsLoading);
-    const error = useSelector(selectError);
+    const isLoadingTasks = useSelector(selectIsLoading);
+    const errorTasks = useSelector(selectError);
 
     // Локальное состояние
     const [openTaskDialog, setOpenTaskDialog] = useState(false);
@@ -43,17 +45,38 @@ const Tasks = ({ courseId }) => {
     const [currentTask, setCurrentTask] = useState(null);
     const [taskTitle, setTaskTitle] = useState('');
     const [taskDescription, setTaskDescription] = useState('');
-    const [selectedFiles, setSelectedFiles] = useState([]); // массив файлов
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    // При изменении courseId загружаем задачи
+    const userId = useMemo(() => localStorage.getItem('user_id'), []);
+
+    // Загрузка задач
     useEffect(() => {
-        if (courseId) {
-            dispatch(tasksActions.getTasksByCourseId(courseId));
-        }
+        if (!courseId) return;
+
+        const loadTasks = async () => {
+            try {
+                const institution = await dispatch(fetchUserInstitution()).unwrap();
+                const userRole = institution?.role;
+
+                if (userRole === 'STUDENT') {
+                    await dispatch(getTasksByCourseAndUserId(courseId)).unwrap();
+                } else {
+                    await dispatch(getTasksByCourseId(courseId)).unwrap();
+                }
+            } catch (error) {
+                setSnackbar({
+                    open: true,
+                    message: `Не удалось загрузить задачи: ${error.message || error}`,
+                    severity: 'error',
+                });
+            }
+        };
+
+        loadTasks();
     }, [dispatch, courseId]);
 
-    // === Управление задачами (без изменений) ===
+    // === Управление задачами ===
     const handleAddTask = () => {
         setCurrentTask(null);
         setTaskTitle('');
@@ -78,53 +101,37 @@ const Tasks = ({ courseId }) => {
             return;
         }
 
-        if (currentTask) {
-            dispatch(
+        const savePromise = currentTask
+            ? dispatch(
                 tasksActions.updateTaskById({
                     taskId: currentTask.id,
                     updatedTaskData: { newTitle: taskTitle, newDescription: taskDescription, taskId: currentTask.id },
                 })
             )
-                .unwrap()
-                .then(() => {
-                    setSnackbar({
-                        open: true,
-                        message: 'Задача успешно обновлена',
-                        severity: 'success',
-                    });
-                    handleCloseTaskDialog();
-                })
-                .catch((err) => {
-                    setSnackbar({
-                        open: true,
-                        message: `Ошибка при обновлении: ${err}`,
-                        severity: 'error',
-                    });
-                });
-        } else {
-            dispatch(
+            : dispatch(
                 tasksActions.addTaskToCourse({
                     courseId,
                     task: { title: taskTitle, description: taskDescription },
                 })
-            )
-                .unwrap()
-                .then(() => {
-                    setSnackbar({
-                        open: true,
-                        message: 'Задача добавлена',
-                        severity: 'success',
-                    });
-                    handleCloseTaskDialog();
-                })
-                .catch((err) => {
-                    setSnackbar({
-                        open: true,
-                        message: `Ошибка при добавлении: ${err}`,
-                        severity: 'error',
-                    });
+            );
+
+        savePromise
+            .unwrap()
+            .then(() => {
+                setSnackbar({
+                    open: true,
+                    message: currentTask ? 'Задача обновлена' : 'Задача добавлена',
+                    severity: 'success',
                 });
-        }
+                handleCloseTaskDialog();
+            })
+            .catch((err) => {
+                setSnackbar({
+                    open: true,
+                    message: `Ошибка: ${err.message || err}`,
+                    severity: 'error',
+                });
+            });
     };
 
     const handleDeleteTask = (taskId) => {
@@ -141,7 +148,7 @@ const Tasks = ({ courseId }) => {
                 .catch((err) => {
                     setSnackbar({
                         open: true,
-                        message: `Ошибка при удалении: ${err}`,
+                        message: `Ошибка при удалении: ${err.message || err}`,
                         severity: 'error',
                     });
                 });
@@ -155,7 +162,7 @@ const Tasks = ({ courseId }) => {
         setTaskDescription('');
     };
 
-    // === Отправка решения: теперь с несколькими файлами ===
+    // === Управление решением ===
     const handleOpenSolutionDialog = (task) => {
         setCurrentTask(task);
         setSelectedFiles([]);
@@ -175,14 +182,13 @@ const Tasks = ({ courseId }) => {
         if (selectedFiles.length === 0) {
             setSnackbar({
                 open: true,
-                message: 'Пожалуйста, выберите хотя бы один файл',
+                message: 'Выберите хотя бы один файл',
                 severity: 'warning',
             });
             return;
         }
 
         try {
-            // Формируем массив content: [{ id, original_file_name }, ...]
             const content = selectedFiles.map((file) => ({
                 id: uuidv4(),
                 original_file_name: file.name,
@@ -232,11 +238,10 @@ const Tasks = ({ courseId }) => {
                     Добавить задачу
                 </Button>
 
-                {isLoading && <Typography color="textSecondary">Загрузка...</Typography>}
-
-                {error && (
+                {isLoadingTasks && <Typography color="textSecondary">Загрузка задач...</Typography>}
+                {errorTasks && (
                     <Typography color="error" sx={{ mb: 2 }}>
-                        Ошибка: {error}
+                        Ошибка загрузки задач: {errorTasks}
                     </Typography>
                 )}
 
@@ -253,39 +258,13 @@ const Tasks = ({ courseId }) => {
                         <TableBody>
                             {tasks.length > 0 ? (
                                 tasks.map((task) => (
-                                    <TableRow key={task.id} hover>
-                                        <TableCell>{task.id}</TableCell>
-                                        <TableCell>{task.title}</TableCell>
-                                        <TableCell>{task.description || '—'}</TableCell>
-                                        <TableCell align="right">
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                color="primary"
-                                                onClick={() => handleEditTask(task)}
-                                                sx={{ mr: 1 }}
-                                            >
-                                                Редактировать
-                                            </Button>
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                color="error"
-                                                onClick={() => handleDeleteTask(task.id)}
-                                                sx={{ mr: 1 }}
-                                            >
-                                                Удалить
-                                            </Button>
-                                            <Button
-                                                size="small"
-                                                variant="contained"
-                                                color="success"
-                                                onClick={() => handleOpenSolutionDialog(task)}
-                                            >
-                                                Добавить решение
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
+                                    <TaskItem
+                                        key={task.id}
+                                        task={task}
+                                        onEdit={handleEditTask}
+                                        onDelete={handleDeleteTask}
+                                        onAddSolution={handleOpenSolutionDialog}
+                                    />
                                 ))
                             ) : (
                                 <TableRow>
@@ -298,11 +277,9 @@ const Tasks = ({ courseId }) => {
                     </Table>
                 </TableContainer>
 
-                {/* Диалог: Добавление/редактирование задачи */}
+                {/* Диалог: редактирование/добавление задачи */}
                 <Dialog open={openTaskDialog} onClose={handleCloseTaskDialog} maxWidth="sm" fullWidth>
-                    <DialogTitle>
-                        {currentTask ? 'Редактировать задачу' : 'Добавить новую задачу'}
-                    </DialogTitle>
+                    <DialogTitle>{currentTask ? 'Редактировать задачу' : 'Добавить новую задачу'}</DialogTitle>
                     <DialogContent>
                         <TextField
                             autoFocus
@@ -333,15 +310,13 @@ const Tasks = ({ courseId }) => {
                     </DialogActions>
                 </Dialog>
 
-                {/* Диалог: Отправка решения (несколько файлов) */}
+                {/* Диалог: отправка решения */}
                 <Dialog open={openSolutionDialog} onClose={handleCloseSolutionDialog} maxWidth="md" fullWidth>
                     <DialogTitle>Отправить решение</DialogTitle>
                     <DialogContent>
                         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                             Задача: {currentTask?.title}
                         </Typography>
-
-                        {/* Выбор файлов */}
                         <Box sx={{ mb: 2 }}>
                             <input
                                 type="file"
@@ -352,54 +327,66 @@ const Tasks = ({ courseId }) => {
                                 onChange={handleFileChange}
                             />
                             <label htmlFor="multiple-files">
-                                <Button variant="contained" component="span">
+                                <Button variant="contained" component="span" color="primary">
                                     Выбрать файлы
                                 </Button>
                             </label>
-
-                            {/* Список выбранных файлов */}
                             {selectedFiles.length > 0 && (
-                                <List dense sx={{ mt: 2 }}>
+                                <Box sx={{ mt: 2 }}>
                                     <Typography variant="body2" fontWeight="bold" gutterBottom>
                                         Выбранные файлы:
                                     </Typography>
-                                    {selectedFiles.map((file, index) => (
-                                        <ListItem
-                                            key={index}
-                                            secondaryAction={
-                                                <IconButton edge="end" onClick={() => handleRemoveFile(index)}>
-                                                    ✕
-                                                </IconButton>
-                                            }
-                                        >
-                                            <ListItemText
-                                                primary={file.name}
-                                                secondary={`${Math.round(file.size / 1024)} КБ`}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
+                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                        {selectedFiles.map((file, index) => (
+                                            <li key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <span>{file.name}</span>
+                                                <span style={{ color: '#666', fontSize: 12 }}>
+                                                    {(file.size / 1024).toFixed(1)} КБ
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveFile(index)}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        color: 'red',
+                                                        cursor: 'pointer',
+                                                        fontSize: 14,
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </Box>
                             )}
                         </Box>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleCloseSolutionDialog} color="error">
+                        <Button onClick={handleCloseSolutionDialog} color="secondary">
                             Отмена
                         </Button>
-                        <Button onClick={handleAddSolution} variant="contained" color="primary">
-                            Отправить решение
+                        <Button onClick={handleAddSolution} variant="contained" color="success">
+                            Отправить
                         </Button>
                     </DialogActions>
                 </Dialog>
 
-                {/* Уведомление */}
+                {/* Snackbar */}
                 <Snackbar
                     open={snackbar.open}
-                    autoHideDuration={4000}
+                    autoHideDuration={6000}
                     onClose={handleCloseSnackbar}
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 >
-                    <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+                    <Alert
+                        onClose={handleCloseSnackbar}
+                        severity={snackbar.severity}
+                        sx={{ width: '100%' }}
+                        elevation={6}
+                        variant="filled"
+                    >
                         {snackbar.message}
                     </Alert>
                 </Snackbar>

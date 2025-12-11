@@ -166,9 +166,10 @@ export const getTasksByCourseId = createAsyncThunk(
 // Получение информации о заданиях по id курса и id пользователя
 export const getTasksByCourseAndUserId = createAsyncThunk(
     "tasks/getTasksByCourseAndUserId",
-    async ({ courseId, userId }, { rejectWithValue }) => {
+    async (courseId, { rejectWithValue }) => {
         try {
             const accessToken = localStorage.getItem("access_token");
+            const userId = getUserIdFromStorage();
             if (!accessToken) {
                 return rejectWithValue("access_token не найден в localStorage");
             }
