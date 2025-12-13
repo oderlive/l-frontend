@@ -197,10 +197,14 @@ const Menu = ({ setSelectedComponent }) => {
     };
 
     useEffect(() => {
-        loadInstitutions();
-        const intervalId = setInterval(loadInstitutions, 60000);
-        return () => clearInterval(intervalId);
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            loadInstitutions();
+            const intervalId = setInterval(loadInstitutions, 10000); // автообновление каждую минуту
+            return () => clearInterval(intervalId);
+        }
     }, []);
+
 
     // Обработчики модалок
     const openGroupModal = () => setIsGroupModalOpen(true);

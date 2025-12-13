@@ -13,7 +13,6 @@ import {
     TextField,
     InputAdornment,
     Alert,
-    Paper,
 } from '@mui/material';
 import { ExpandMore, ExpandLess, Delete as DeleteIcon, AddComment as AddCommentIcon } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
@@ -30,16 +29,15 @@ const TaskItem = ({ task, onEdit, onDelete, onAddSolution }) => {
     const [expanded, setExpanded] = useState(false);
     const [commentText, setCommentText] = useState('');
 
-    // ✅ useSelector — теперь на верхнем уровне компонента
+    // Селекторы для комментариев
     const comments = useSelector((state) => selectTaskComments(state, task.id));
-    const isLoadingComments = useSelector((state) => state.comments.loading);
-    const errorComments = useSelector((state) => state.comments.error);
+    const isLoadingComments = useSelector(selectCommentsLoading);
+    const errorComments = useSelector(selectCommentsError);
 
     const handleToggle = async () => {
         if (!expanded) {
             setExpanded(true);
-            // Загружаем комментарии при раскрытии
-            await dispatch(getTaskComments(task.id)).catch(console.error);
+            await dispatch(getTaskComments(task.id)).unwrap().catch(console.error);
         } else {
             setExpanded(false);
             setCommentText('');
@@ -74,15 +72,63 @@ const TaskItem = ({ task, onEdit, onDelete, onAddSolution }) => {
 
     return (
         <>
+            {/* Основная строка задачи */}
             <TableRow hover>
                 <TableCell>{task.id}</TableCell>
-                <TableCell>{task.title}</TableCell>
-                <TableCell>{task.description || '—'}</TableCell>
+                <TableCell>
+                    <Typography variant="body2" fontWeight="medium">
+                        {task.title}
+                    </Typography>
+                </TableCell>
+                <TableCell>
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                        {task.description || '—'}
+                    </Typography>
+                </TableCell>
+                <TableCell>
+                    {task.to_submit_at
+                        ? new Date(task.to_submit_at).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        })
+                        : '—'}
+                </TableCell>
+                <TableCell>{task.is_assessed ? '✅' : '❌'}</TableCell>
+                <TableCell>{task.is_for_everyone ? '✅' : '❌'}</TableCell>
+                <TableCell align="center">
+                    <Typography variant="body2" fontWeight="bold" color="primary">
+                        {task.content?.length || 0}
+                    </Typography>
+                </TableCell>
+                <TableCell align="center">
+                    <Typography
+                        variant="body2"
+                        fontWeight="bold"
+                        color={comments?.length > 0 ? 'success.main' : 'text.secondary'}
+                    >
+                        {comments !== undefined ? comments.length : '...'}
+                    </Typography>
+                </TableCell>
                 <TableCell align="right">
-                    <Button size="small" variant="outlined" color="primary" onClick={() => onEdit(task)} sx={{ mr: 1 }}>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => onEdit(task)}
+                        sx={{ mr: 1 }}
+                    >
                         Редактировать
                     </Button>
-                    <Button size="small" variant="outlined" color="error" onClick={() => onDelete(task.id)} sx={{ mr: 1 }}>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => onDelete(task.id)}
+                        sx={{ mr: 1 }}
+                    >
                         Удалить
                     </Button>
                     <Button
@@ -100,12 +146,13 @@ const TaskItem = ({ task, onEdit, onDelete, onAddSolution }) => {
                 </TableCell>
             </TableRow>
 
+            {/* Строка с комментариями */}
             <TableRow>
-                <TableCell colSpan={4} sx={{ py: 0, borderBottom: 'none' }}>
+                <TableCell colSpan={9} sx={{ py: 0, borderBottom: 'none' }}>
                     <Collapse in={expanded} timeout="auto">
                         <Box sx={{ m: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
                             <Typography variant="subtitle2" gutterBottom>
-                                Комментарии к задаче
+                                💬 Комментарии к задаче
                             </Typography>
 
                             {isLoadingComments && (
@@ -120,13 +167,15 @@ const TaskItem = ({ task, onEdit, onDelete, onAddSolution }) => {
                                 </Alert>
                             )}
 
-                            {comments.length > 0 ? (
+                            {comments && comments.length > 0 ? (
                                 <List dense>
                                     {comments.map((comment) => {
                                         const author = comment.author;
                                         const fullName = [author.surname, author.name, author.patronymic]
                                             .filter(Boolean)
                                             .join(' ') || `Пользователь ${comment.user_id}`;
+
+                                        const isOwn = comment.user_id === localStorage.getItem('user_id');
 
                                         return (
                                             <ListItem
@@ -135,9 +184,7 @@ const TaskItem = ({ task, onEdit, onDelete, onAddSolution }) => {
                                                     border: '1px solid #f0f0f0',
                                                     borderRadius: 1,
                                                     mb: 1,
-                                                    bgcolor: comment.user_id === localStorage.getItem('user_id')
-                                                        ? 'action.hover'
-                                                        : 'background.default',
+                                                    bgcolor: isOwn ? 'action.hover' : 'background.default',
                                                 }}
                                             >
                                                 <ListItemText
@@ -155,7 +202,7 @@ const TaskItem = ({ task, onEdit, onDelete, onAddSolution }) => {
                                                         </>
                                                     }
                                                 />
-                                                {comment.user_id === localStorage.getItem('user_id') && (
+                                                {isOwn && (
                                                     <IconButton
                                                         size="small"
                                                         edge="end"

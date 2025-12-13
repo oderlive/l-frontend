@@ -19,17 +19,18 @@ import {
     Alert,
     Paper,
     TextField,
-    InputAdornment,
+    FormControlLabel,
+    Checkbox,
 } from '@mui/material';
 import { AddComment as AddCommentIcon, ExpandMore, ExpandLess, Delete as DeleteIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import * as tasksActions from '../../features/tasks/tasks';
 import * as solutionsActions from '../../features/solution/solutions';
-import { v4 as uuidv4 } from 'uuid';
 import { getTasksByCourseAndUserId, getTasksByCourseId } from '../../features/tasks/tasks';
 import { fetchUserInstitution } from '../../features/users/usersSlice';
 import { selectTasks, selectIsLoading, selectError } from '../../features/tasks/tasksSlice';
-import TaskItem from './TaskItem'; // ✅ Импорт компонента с комментариями
+import TaskItem from './TaskItem';
+import axios from 'axios';
 
 const Tasks = ({ courseId }) => {
     const dispatch = useDispatch();
@@ -45,8 +46,14 @@ const Tasks = ({ courseId }) => {
     const [currentTask, setCurrentTask] = useState(null);
     const [taskTitle, setTaskTitle] = useState('');
     const [taskDescription, setTaskDescription] = useState('');
-    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [selectedFiles, setSelectedFiles] = useState([]); // Общее состояние для файлов (задачи и решения)
+    const [fileUrls, setFileUrls] = useState([]); // URL загруженных файлов
+    const [taskToSubmitAt, setTaskToSubmitAt] = useState('');
+    const [taskAssessed, setTaskAssessed] = useState(false);
+    const [taskForEveryone, setTaskForEveryone] = useState(false);
+    const [taskTargetUsers, setTaskTargetUsers] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [solutionComment, setSolutionComment] = useState('');
 
     const userId = useMemo(() => localStorage.getItem('user_id'), []);
 
@@ -81,6 +88,12 @@ const Tasks = ({ courseId }) => {
         setCurrentTask(null);
         setTaskTitle('');
         setTaskDescription('');
+        setTaskToSubmitAt('');
+        setTaskAssessed(false);
+        setTaskForEveryone(false);
+        setTaskTargetUsers([]);
+        setSelectedFiles([]);
+        setFileUrls([]);
         setOpenTaskDialog(true);
     };
 
@@ -88,10 +101,26 @@ const Tasks = ({ courseId }) => {
         setCurrentTask(task);
         setTaskTitle(task.title);
         setTaskDescription(task.description || '');
+        setTaskToSubmitAt(task.toSubmitAt || '');
+        setTaskAssessed(task.assessed || false);
+        setTaskForEveryone(task.forEveryone || false);
+        setTaskTargetUsers(task.targetUsersIdList || []);
+        setSelectedFiles([]);
+        setFileUrls(task.content || []);
         setOpenTaskDialog(true);
     };
 
-    const handleSaveTask = () => {
+    const handleFilesChange = (e) => {
+        setSelectedFiles(Array.from(e.target.files));
+    };
+
+    // Универсальная функция удаления файла по индексу
+    const handleRemoveFile = (index) => {
+        setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+        setFileUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
+    };
+
+    const handleSaveTask = async () => {
         if (!taskTitle.trim()) {
             setSnackbar({
                 open: true,
@@ -101,23 +130,58 @@ const Tasks = ({ courseId }) => {
             return;
         }
 
+        const formData = new FormData();
+
+        // Обязательные поля
+        formData.append('title', taskTitle);
+        formData.append('description', taskDescription);
+        formData.append('toSubmitAt', taskToSubmitAt || '');
+        formData.append('assessed', String(taskAssessed));
+        formData.append('forEveryone', String(taskForEveryone));
+
+        // ❗ Добавляем targetUsersIdList ТОЛЬКО если он НЕ пустой
+        if (taskTargetUsers && taskTargetUsers.length > 0) {
+            try {
+                // Убедимся, что все элементы — валидные UUID
+                const validUuids = taskTargetUsers
+                    .map(id => id.trim())
+                    .filter(id => id);
+
+                if (validUuids.length > 0) {
+                    formData.append('targetUsersIdList', JSON.stringify(validUuids));
+                }
+            } catch (err) {
+                setSnackbar({
+                    open: true,
+                    message: 'Некорректные ID пользователей',
+                    severity: 'error',
+                });
+                return;
+            }
+        }
+
+        // Файлы: content (массив)
+        selectedFiles.forEach((file) => {
+            formData.append('content', file);
+        });
+
         const savePromise = currentTask
             ? dispatch(
                 tasksActions.updateTaskById({
                     taskId: currentTask.id,
-                    updatedTaskData: { newTitle: taskTitle, newDescription: taskDescription, taskId: currentTask.id },
+                    updatedTaskData: formData,
                 })
             )
             : dispatch(
                 tasksActions.addTaskToCourse({
                     courseId,
-                    task: { title: taskTitle, description: taskDescription },
+                    task: formData,
                 })
             );
 
         savePromise
             .unwrap()
-            .then(() => {
+            .then((result) => {
                 setSnackbar({
                     open: true,
                     message: currentTask ? 'Задача обновлена' : 'Задача добавлена',
@@ -132,6 +196,25 @@ const Tasks = ({ courseId }) => {
                     severity: 'error',
                 });
             });
+    };
+
+
+
+
+    const uploadFiles = async (files) => {
+        const urls = [];
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await axios.post('/api/upload', formData, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                },
+            });
+            urls.push(response.data.url);
+        }
+        return urls;
     };
 
     const handleDeleteTask = (taskId) => {
@@ -160,22 +243,26 @@ const Tasks = ({ courseId }) => {
         setCurrentTask(null);
         setTaskTitle('');
         setTaskDescription('');
+        setTaskToSubmitAt('');
+        setTaskAssessed(false);
+        setTaskForEveryone(false);
+        setTaskTargetUsers([]);
+        setSelectedFiles([]);
+        setFileUrls([]);
     };
 
     // === Управление решением ===
     const handleOpenSolutionDialog = (task) => {
         setCurrentTask(task);
         setSelectedFiles([]);
+        setFileUrls([]);
+        setSolutionComment('');
         setOpenSolutionDialog(true);
     };
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
         setSelectedFiles((prev) => [...prev, ...files]);
-    };
-
-    const handleRemoveFile = (index) => {
-        setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleAddSolution = async () => {
@@ -189,38 +276,54 @@ const Tasks = ({ courseId }) => {
         }
 
         try {
-            const content = selectedFiles.map((file) => ({
-                id: uuidv4(),
-                original_file_name: file.name,
-            }));
+            const content = await uploadSolutionFiles(selectedFiles);
 
             await dispatch(
                 solutionsActions.addSolution({
                     taskId: currentTask.id,
                     content,
+                    comment: solutionComment,
                 })
             ).unwrap();
 
             setSnackbar({
                 open: true,
-                message: 'Решение отправлено!',
+                message: 'Решение успешно отправлено!',
                 severity: 'success',
             });
             handleCloseSolutionDialog();
         } catch (err) {
             setSnackbar({
                 open: true,
-                message: `Ошибка при отправке: ${err.message || 'Неизвестная ошибка'}`,
+                message: `Ошибка при отправке решения: ${err.message || 'Неизвестная ошибка'}`,
                 severity: 'error',
             });
             console.error('Ошибка при отправке решения:', err);
         }
     };
 
+    const uploadSolutionFiles = async (files) => {
+        const urls = [];
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await axios.post('/api/upload/solution', formData, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+                },
+            });
+            urls.push(response.data.url);
+        }
+        return urls;
+    };
+
     const handleCloseSolutionDialog = () => {
         setOpenSolutionDialog(false);
         setCurrentTask(null);
         setSelectedFiles([]);
+        setFileUrls([]);
+        setSolutionComment('');
     };
 
     const handleCloseSnackbar = () => {
@@ -277,9 +380,9 @@ const Tasks = ({ courseId }) => {
                     </Table>
                 </TableContainer>
 
-                {/* Диалог: редактирование/добавление задачи */}
+                {/* Диалог: добавление/редактирование задачи */}
                 <Dialog open={openTaskDialog} onClose={handleCloseTaskDialog} maxWidth="sm" fullWidth>
-                    <DialogTitle>{currentTask ? 'Редактировать задачу' : 'Добавить новую задачу'}</DialogTitle>
+                    <DialogTitle>{currentTask ? 'Редактировать задачу' : 'Добавить задачу'}</DialogTitle>
                     <DialogContent>
                         <TextField
                             autoFocus
@@ -299,6 +402,77 @@ const Tasks = ({ courseId }) => {
                             value={taskDescription}
                             onChange={(e) => setTaskDescription(e.target.value)}
                         />
+                        <TextField
+                            margin="dense"
+                            label="Срок сдачи"
+                            fullWidth
+                            type="datetime-local"
+                            value={taskToSubmitAt}
+                            onChange={(e) => setTaskToSubmitAt(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                            <TextField
+                                label="ID пользователей (targetUsersIdList)"
+                                fullWidth
+                                value={taskTargetUsers.join(',')}
+                                onChange={(e) => setTaskTargetUsers(e.target.value.split(',').map(id => id.trim()).filter(id => id))}
+                            />
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                            <FormControlLabel
+                                control={<Checkbox checked={taskAssessed} onChange={(e) => setTaskAssessed(e.target.checked)} />}
+                                label="Оценивается"
+                            />
+                            <FormControlLabel
+                                control={<Checkbox checked={taskForEveryone} onChange={(e) => setTaskForEveryone(e.target.checked)} />}
+                                label="Для всех"
+                            />
+                        </Box>
+
+                        <input
+                            type="file"
+                            accept="*/*"
+                            id="task-files"
+                            multiple
+                            hidden
+                            onChange={handleFilesChange}
+                        />
+                        <label htmlFor="task-files">
+                            <Button variant="contained" component="span" color="primary" sx={{ mt: 2 }}>
+                                Прикрепить файлы
+                            </Button>
+                        </label>
+
+                        {(selectedFiles.length > 0 || fileUrls.length > 0) && (
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, mt: 2 }}>
+                                {selectedFiles.map((file, index) => (
+                                    <li key={`local-${index}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                        <span>{file.name}</span>
+                                        <span style={{ color: '#666', fontSize: 12 }}>{(file.size / 1024).toFixed(1)} КБ</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveFile(index)}
+                                            style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: 14 }}
+                                        >
+                                            ×
+                                        </button>
+                                    </li>
+                                ))}
+                                {fileUrls.map((url, index) => (
+                                    <li key={`url-${index}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                        <span>Загруженный файл</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveFile(index + selectedFiles.length)}
+                                            style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: 14 }}
+                                        >
+                                            ×
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseTaskDialog} color="secondary">
@@ -321,12 +495,12 @@ const Tasks = ({ courseId }) => {
                             <input
                                 type="file"
                                 accept="*/*"
-                                id="multiple-files"
+                                id="solution-files"
                                 multiple
                                 hidden
                                 onChange={handleFileChange}
                             />
-                            <label htmlFor="multiple-files">
+                            <label htmlFor="solution-files">
                                 <Button variant="contained" component="span" color="primary">
                                     Выбрать файлы
                                 </Button>
@@ -340,19 +514,11 @@ const Tasks = ({ courseId }) => {
                                         {selectedFiles.map((file, index) => (
                                             <li key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                                                 <span>{file.name}</span>
-                                                <span style={{ color: '#666', fontSize: 12 }}>
-                                                    {(file.size / 1024).toFixed(1)} КБ
-                                                </span>
+                                                <span style={{ color: '#666', fontSize: 12 }}>{(file.size / 1024).toFixed(1)} КБ</span>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveFile(index)}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        color: 'red',
-                                                        cursor: 'pointer',
-                                                        fontSize: 14,
-                                                    }}
+                                                    style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: 14 }}
                                                 >
                                                     ×
                                                 </button>
@@ -362,31 +528,35 @@ const Tasks = ({ courseId }) => {
                                 </Box>
                             )}
                         </Box>
+
+                        <TextField
+                            margin="dense"
+                            label="Комментарий к решению"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={solutionComment}
+                            onChange={(e) => setSolutionComment(e.target.value)}
+                        />
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseSolutionDialog} color="secondary">
                             Отмена
                         </Button>
-                        <Button onClick={handleAddSolution} variant="contained" color="success">
-                            Отправить
+                        <Button
+                            onClick={handleAddSolution}
+                            variant="contained"
+                            color="primary"
+                            disabled={selectedFiles.length === 0}
+                        >
+                            Отправить решение
                         </Button>
                     </DialogActions>
                 </Dialog>
 
-                {/* Snackbar */}
-                <Snackbar
-                    open={snackbar.open}
-                    autoHideDuration={6000}
-                    onClose={handleCloseSnackbar}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                >
-                    <Alert
-                        onClose={handleCloseSnackbar}
-                        severity={snackbar.severity}
-                        sx={{ width: '100%' }}
-                        elevation={6}
-                        variant="filled"
-                    >
+                {/* Снэкбар для уведомлений */}
+                <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleCloseSnackbar}>
+                    <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
                         {snackbar.message}
                     </Alert>
                 </Snackbar>
