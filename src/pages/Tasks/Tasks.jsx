@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Box,
     Button,
@@ -22,15 +22,16 @@ import {
     FormControlLabel,
     Checkbox,
 } from '@mui/material';
-import { AddComment as AddCommentIcon, ExpandMore, ExpandLess, Delete as DeleteIcon } from '@mui/icons-material';
+import { AddCommentIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
+
+// Используем экшены из Redux
 import * as tasksActions from '../../features/tasks/tasks';
 import * as solutionsActions from '../../features/solution/solutions';
 import { getTasksByCourseAndUserId, getTasksByCourseId } from '../../features/tasks/tasks';
 import { fetchUserInstitution } from '../../features/users/usersSlice';
 import { selectTasks, selectIsLoading, selectError } from '../../features/tasks/tasksSlice';
-import TaskItem from './TaskItem';
-import axios from 'axios';
+import TaskItem from "./TaskItem";
 
 const Tasks = ({ courseId }) => {
     const dispatch = useDispatch();
@@ -46,8 +47,7 @@ const Tasks = ({ courseId }) => {
     const [currentTask, setCurrentTask] = useState(null);
     const [taskTitle, setTaskTitle] = useState('');
     const [taskDescription, setTaskDescription] = useState('');
-    const [selectedFiles, setSelectedFiles] = useState([]); // Общее состояние для файлов (задачи и решения)
-    const [fileUrls, setFileUrls] = useState([]); // URL загруженных файлов
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const [taskToSubmitAt, setTaskToSubmitAt] = useState('');
     const [taskAssessed, setTaskAssessed] = useState(false);
     const [taskForEveryone, setTaskForEveryone] = useState(false);
@@ -93,7 +93,6 @@ const Tasks = ({ courseId }) => {
         setTaskForEveryone(false);
         setTaskTargetUsers([]);
         setSelectedFiles([]);
-        setFileUrls([]);
         setOpenTaskDialog(true);
     };
 
@@ -106,7 +105,6 @@ const Tasks = ({ courseId }) => {
         setTaskForEveryone(task.forEveryone || false);
         setTaskTargetUsers(task.targetUsersIdList || []);
         setSelectedFiles([]);
-        setFileUrls(task.content || []);
         setOpenTaskDialog(true);
     };
 
@@ -114,10 +112,8 @@ const Tasks = ({ courseId }) => {
         setSelectedFiles(Array.from(e.target.files));
     };
 
-    // Универсальная функция удаления файла по индексу
     const handleRemoveFile = (index) => {
         setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-        setFileUrls((prevUrls) => prevUrls.filter((_, i) => i !== index));
     };
 
     const handleSaveTask = async () => {
@@ -131,57 +127,38 @@ const Tasks = ({ courseId }) => {
         }
 
         const formData = new FormData();
-
-        // Обязательные поля
         formData.append('title', taskTitle);
         formData.append('description', taskDescription);
         formData.append('toSubmitAt', taskToSubmitAt || '');
         formData.append('assessed', String(taskAssessed));
         formData.append('forEveryone', String(taskForEveryone));
 
-        // ❗ Добавляем targetUsersIdList ТОЛЬКО если он НЕ пустой
         if (taskTargetUsers && taskTargetUsers.length > 0) {
-            try {
-                // Убедимся, что все элементы — валидные UUID
-                const validUuids = taskTargetUsers
-                    .map(id => id.trim())
-                    .filter(id => id);
-
-                if (validUuids.length > 0) {
-                    formData.append('targetUsersIdList', JSON.stringify(validUuids));
-                }
-            } catch (err) {
-                setSnackbar({
-                    open: true,
-                    message: 'Некорректные ID пользователей',
-                    severity: 'error',
-                });
-                return;
+            const validUuids = taskTargetUsers
+                .map(id => id.trim())
+                .filter(id => id);
+            if (validUuids.length > 0) {
+                formData.append('targetUsersIdList', JSON.stringify(validUuids));
             }
         }
 
-        // Файлы: content (массив)
         selectedFiles.forEach((file) => {
             formData.append('content', file);
         });
 
         const savePromise = currentTask
-            ? dispatch(
-                tasksActions.updateTaskById({
-                    taskId: currentTask.id,
-                    updatedTaskData: formData,
-                })
-            )
-            : dispatch(
-                tasksActions.addTaskToCourse({
-                    courseId,
-                    task: formData,
-                })
-            );
+            ? dispatch(tasksActions.updateTaskById({
+                taskId: currentTask.id,
+                updatedTaskData: formData,
+            }))
+            : dispatch(tasksActions.addTaskToCourse({
+                courseId,
+                task: formData,
+            }));
 
         savePromise
             .unwrap()
-            .then((result) => {
+            .then(() => {
                 setSnackbar({
                     open: true,
                     message: currentTask ? 'Задача обновлена' : 'Задача добавлена',
@@ -196,25 +173,6 @@ const Tasks = ({ courseId }) => {
                     severity: 'error',
                 });
             });
-    };
-
-
-
-
-    const uploadFiles = async (files) => {
-        const urls = [];
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await axios.post('/api/upload', formData, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-                },
-            });
-            urls.push(response.data.url);
-        }
-        return urls;
     };
 
     const handleDeleteTask = (taskId) => {
@@ -248,14 +206,12 @@ const Tasks = ({ courseId }) => {
         setTaskForEveryone(false);
         setTaskTargetUsers([]);
         setSelectedFiles([]);
-        setFileUrls([]);
     };
 
     // === Управление решением ===
     const handleOpenSolutionDialog = (task) => {
         setCurrentTask(task);
         setSelectedFiles([]);
-        setFileUrls([]);
         setSolutionComment('');
         setOpenSolutionDialog(true);
     };
@@ -275,14 +231,19 @@ const Tasks = ({ courseId }) => {
             return;
         }
 
-        try {
-            const content = await uploadSolutionFiles(selectedFiles);
+        // Создаём FormData для отправки решения
+        const solutionData = new FormData();
+        selectedFiles.forEach(file => {
+            solutionData.append('content', file);
+        });
+        solutionData.append('comment', solutionComment);
 
+        try {
+            // Используем ваше API из solutions.js
             await dispatch(
                 solutionsActions.addSolution({
                     taskId: currentTask.id,
-                    content,
-                    comment: solutionComment,
+                    solutionData,
                 })
             ).unwrap();
 
@@ -302,27 +263,10 @@ const Tasks = ({ courseId }) => {
         }
     };
 
-    const uploadSolutionFiles = async (files) => {
-        const urls = [];
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await axios.post('/api/upload/solution', formData, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-                },
-            });
-            urls.push(response.data.url);
-        }
-        return urls;
-    };
-
     const handleCloseSolutionDialog = () => {
         setOpenSolutionDialog(false);
         setCurrentTask(null);
         setSelectedFiles([]);
-        setFileUrls([]);
         setSolutionComment('');
     };
 
@@ -444,27 +388,15 @@ const Tasks = ({ courseId }) => {
                             </Button>
                         </label>
 
-                        {(selectedFiles.length > 0 || fileUrls.length > 0) && (
+                        {selectedFiles.length > 0 && (
                             <ul style={{ listStyle: 'none', padding: 0, margin: 0, mt: 2 }}>
                                 {selectedFiles.map((file, index) => (
-                                    <li key={`local-${index}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                    <li key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                                         <span>{file.name}</span>
                                         <span style={{ color: '#666', fontSize: 12 }}>{(file.size / 1024).toFixed(1)} КБ</span>
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveFile(index)}
-                                            style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: 14 }}
-                                        >
-                                            ×
-                                        </button>
-                                    </li>
-                                ))}
-                                {fileUrls.map((url, index) => (
-                                    <li key={`url-${index}`} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                        <span>Загруженный файл</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveFile(index + selectedFiles.length)}
                                             style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: 14 }}
                                         >
                                             ×

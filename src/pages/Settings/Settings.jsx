@@ -47,10 +47,6 @@ const Settings = () => {
     const [passwordResetEmailError, setPasswordResetEmailError] = useState(null);
     const [passwordResetEmailSuccess, setPasswordResetEmailSuccess] = useState(false);
 
-    // Состояние для сброса настроек 2FA (через учётную запись)
-    const [tfaResetLoading, setTfaResetLoading] = useState(false);
-    const [tfaResetError, setTfaResetError] = useState(null);
-
     // Состояния для email и токена активации
     const [userEmail, setUserEmail] = useState('');
     const [activationToken, setActivationToken] = useState('');
@@ -59,6 +55,16 @@ const Settings = () => {
     const [tfaResetEmailLoading, setTfaResetEmailLoading] = useState(false);
     const [tfaResetEmailError, setTfaResetEmailError] = useState(null);
     const [tfaResetEmailSuccess, setTfaResetEmailSuccess] = useState(false);
+
+    // ✅ Новые состояния: email и TFA-код для сброса
+    const [tfaResetEmail, setTfaResetEmail] = useState(user?.email || '');
+    const [tfaResetEmailTouched, setTfaResetEmailTouched] = useState(false);
+    const [tfaCode, setTfaCode] = useState('');
+    const [tfaCodeTouched, setTfaCodeTouched] = useState(false);
+
+    // Валидация
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tfaResetEmail);
+    const isTfaCodeValid = tfaCode.trim().length === 6 && /^\d{6}$/.test(tfaCode);
 
     // Обработчик активации аккаунта
     const handleAccountActivation = async () => {
@@ -170,24 +176,7 @@ const Settings = () => {
         }
     };
 
-    // Обработчик сброса настроек 2FA (через учётку)
-    const handleResetTfaSettings = async () => {
-        setTfaResetLoading(true);
-        setTfaResetError(null);
-
-        try {
-            await dispatch(resetTfa()).unwrap();
-            setTfaResetError(null);
-            alert('Настройки 2FA сброшены!');
-        } catch (err) {
-            setTfaResetError(err.message || 'Ошибка сброса настроек 2FA');
-            console.error(err);
-        } finally {
-            setTfaResetLoading(false);
-        }
-    };
-
-    // ✅ Обработчик отправки письма для сброса tfa_secret (без ввода email)
+    // ✅ Обработчик отправки письма для сброса tfa_secret
     const handleSendTfaResetEmail = async () => {
         setTfaResetEmailLoading(true);
         setTfaResetEmailError(null);
@@ -209,10 +198,15 @@ const Settings = () => {
         }
     };
 
+    // Загрузка статуса 2FA при монтировании
     useEffect(() => {
         dispatch(fetchUserInstitution()).then((action) => {
             if (action.payload?.twoFactorEnabled !== undefined) {
                 setIsTfaEnabled(action.payload.twoFactorEnabled);
+            }
+            // Обновляем tfaResetEmail, если email изменился
+            if (action.payload?.email) {
+                setTfaResetEmail(action.payload.email);
             }
         });
     }, [dispatch]);
@@ -282,29 +276,83 @@ const Settings = () => {
                             }
                             label={isTfaEnabled ? '2FA включён' : 'Включить 2FA'}
                         />
-                        <Box mt={2} display="flex" gap={2}>
-                            <Button
-                                variant="contained"
-                                sx={{ flexGrow: 1 }}
-                                disabled={tfaVerificationLoading}
-                                onClick={handleVerifyTfa}
-                            >
-                                {tfaVerificationLoading ? 'Верификация...' : 'Верифицировать 2FA'}
-                            </Button>
-                            <Button
+
+                        {/* Блок: Забыли 2FA-код */}
+                        <Box mt={3}>
+                            <Typography variant="h6">Забыли 2FA-код?</Typography>
+                            <Typography variant="body2" color="textSecondary" mb={2}>
+                                Введите ваш email и текущий 6-значный код для восстановления доступа.
+                            </Typography>
+
+                            {/* Поле ввода email */}
+                            <TextField
+                                label="Email"
                                 variant="outlined"
-                                sx={{ flexGrow: 1 }}
-                                disabled={tfaResetLoading}
-                                onClick={handleResetTfaSettings}
-                            >
-                                {tfaResetLoading ? 'Сброс...' : 'Сбросить настройки 2FA'}
-                            </Button>
+                                fullWidth
+                                value={tfaResetEmail}
+                                onChange={(e) => setTfaResetEmail(e.target.value)}
+                                onBlur={() => setTfaResetEmailTouched(true)}
+                                error={tfaResetEmailTouched && !isEmailValid}
+                                helperText={tfaResetEmailTouched && !isEmailValid ? 'Введите корректный email' : ' '}
+                                margin="normal"
+                                type="email"
+                                inputProps={{ maxLength: 254 }}
+                            />
+
+                            {/* Поле ввода TFA-кода */}
+                            <TextField
+                                label="Текущий 2FA-код (6 цифр)"
+                                variant="outlined"
+                                fullWidth
+                                value={tfaCode}
+                                onChange={(e) => setTfaCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                                onBlur={() => setTfaCodeTouched(true)}
+                                error={tfaCodeTouched && !isTfaCodeValid}
+                                helperText={tfaCodeTouched && !isTfaCodeValid ? 'Введите 6 цифр' : ' '}
+                                margin="normal"
+                                inputProps={{
+                                    maxLength: 6,
+                                    inputMode: 'numeric',
+                                    pattern: '[0-9]{6}',
+                                }}
+                            />
+
+                            <Box display="flex" gap={2} flexDirection="column" mt={2}>
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    disabled={tfaResetEmailLoading}
+                                    onClick={handleSendTfaResetEmail}
+                                    sx={{ alignSelf: 'flex-start' }}
+                                >
+                                    {tfaResetEmailLoading ? 'Отправка...' : 'Выслать ссылку для сброса'}
+                                </Button>
+
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    disabled={!isEmailValid || !isTfaCodeValid}
+                                    onClick={() => navigate('/reset-tfa-form', {
+                                        state: { email: tfaResetEmail, code: tfaCode }
+                                    })}
+                                    sx={{ alignSelf: 'flex-start' }}
+                                >
+                                    Продолжить
+                                </Button>
+                            </Box>
+
+                            {tfaResetEmailSuccess && (
+                                <Alert severity="success" sx={{ mt: 2 }}>
+                                    Ссылка для сброса 2FA отправлена на <strong>{user.email}</strong>.
+                                </Alert>
+                            )}
+                            {tfaResetEmailError && (
+                                <Alert severity="error" sx={{ mt: 2 }}>{tfaResetEmailError}</Alert>
+                            )}
                         </Box>
+
                         {tfaVerificationError && (
                             <Alert severity="error" sx={{ mt: 1 }}>{tfaVerificationError}</Alert>
-                        )}
-                        {tfaResetError && (
-                            <Alert severity="error" sx={{ mt: 1 }}>{tfaResetError}</Alert>
                         )}
                         {tfaEnableError && (
                             <Alert severity="error" sx={{ mt: 1 }}>{tfaEnableError}</Alert>
@@ -358,46 +406,6 @@ const Settings = () => {
                         )}
                         {passwordResetEmailError && (
                             <Alert severity="error" sx={{ mt: 1 }}>{passwordResetEmailError}</Alert>
-                        )}
-                    </Box>
-                </Grid>
-
-                {/* ✅ Сброс 2FA (если забыл код) — улучшенная версия */}
-                <Grid item xs={12}>
-                    <Box mb={3}>
-                        <Typography variant="h6">Забыли 2FA-код?</Typography>
-                        <Typography variant="body2" color="textSecondary" mb={2}>
-                            Если вы потеряли доступ к приложению для двухфакторной аутентификации, вы можете восстановить доступ.
-                        </Typography>
-
-                        <Box display="flex" gap={2} flexDirection="column">
-                            <Button
-                                variant="contained"
-                                color="error"
-                                disabled={tfaResetEmailLoading}
-                                onClick={handleSendTfaResetEmail}
-                                sx={{ alignSelf: 'flex-start' }}
-                            >
-                                {tfaResetEmailLoading ? 'Отправка...' : 'Выслать ссылку для сброса'}
-                            </Button>
-
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={() => navigate('/reset-tfa')}
-                                sx={{ alignSelf: 'flex-start' }}
-                            >
-                                Перейти к сбросу 2FA
-                            </Button>
-                        </Box>
-
-                        {tfaResetEmailSuccess && (
-                            <Alert severity="success" sx={{ mt: 2 }}>
-                                Ссылка для сброса 2FA отправлена на <strong>{user.email}</strong>. Перейдите по ней, чтобы восстановить доступ.
-                            </Alert>
-                        )}
-                        {tfaResetEmailError && (
-                            <Alert severity="error" sx={{ mt: 2 }}>{tfaResetEmailError}</Alert>
                         )}
                     </Box>
                 </Grid>

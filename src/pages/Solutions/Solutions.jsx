@@ -31,7 +31,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useDispatch, useSelector } from "react-redux";
 
-// Импортируем селекторы и экшены
+// Используем экшены и селекторы из Redux
 import {
     selectReviewedSolutions,
     selectUnreviewedSolutions,
@@ -65,54 +65,48 @@ const RevokeButton = styled(Button)(({ theme }) => ({
 const Solutions = ({ courseId }) => {
     const dispatch = useDispatch();
 
-    // Состояние из Redux
     const solutions = useSelector(selectSolutions);
     const reviewedSolutions = useSelector(selectReviewedSolutions);
     const unreviewedSolutions = useSelector(selectUnreviewedSolutions);
     const loading = useSelector(selectIsLoading);
     const error = useSelector(selectError);
 
-    // Локальное состояние
     const [selectedSolution, setSelectedSolution] = useState(null);
     const [reviewComment, setReviewComment] = useState("");
     const [reviewScore, setReviewScore] = useState(10);
     const [activeTab, setActiveTab] = useState(0);
     const [openDialog, setOpenDialog] = useState(false);
-    const [expandedFile, setExpandedFile] = useState(null); // для раскрытия содержимого файла
+    const [expandedFile, setExpandedFile] = useState(null);
+    const [fileContent, setFileContent] = useState({}); // кэш содержимого файлов
 
     // Загрузка решений при изменении вкладки
     useEffect(() => {
         if (!courseId) return;
 
-        let promise;
+        let action;
         switch (activeTab) {
             case 1:
-                promise = dispatch(solutionsActions.getReviewedBatchSolutionsForCourse(courseId));
+                action = solutionsActions.getReviewedBatchSolutionsForCourse(courseId);
                 break;
             case 2:
-                promise = dispatch(solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId));
+                action = solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId);
                 break;
             default:
-                promise = dispatch(solutionsActions.getBatchSolutionsForCourse(courseId));
+                action = solutionsActions.getBatchSolutionsForCourse(courseId);
         }
 
-        return () => {
-            if (promise && typeof promise.abort === "function") {
-                promise.abort();
-            }
-        };
+        dispatch(action);
     }, [dispatch, courseId, activeTab]);
 
-    // Открытие диалога проверки
     const handleReview = (solution) => {
         setSelectedSolution(solution);
         setReviewComment(solution.feedback || "");
         setReviewScore(solution.score || 10);
-        setExpandedFile(null); // сброс
+        setExpandedFile(null);
+        setFileContent({});
         setOpenDialog(true);
     };
 
-    // Отправка проверки
     const handleSubmitReview = async () => {
         if (!selectedSolution) return;
 
@@ -125,11 +119,6 @@ const Solutions = ({ courseId }) => {
                 })
             ).unwrap();
 
-            // Обновляем данные
-            dispatch(solutionsActions.getReviewedBatchSolutionsForCourse(courseId));
-            dispatch(solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId));
-            dispatch(solutionsActions.getBatchSolutionsForCourse(courseId));
-
             setOpenDialog(false);
             setReviewComment("");
             setReviewScore(10);
@@ -138,22 +127,16 @@ const Solutions = ({ courseId }) => {
         }
     };
 
-    // Отзыв проверки
     const handleRevoke = async (solutionId) => {
         if (!window.confirm("Вы уверены, что хотите отозвать проверку этого решения?")) return;
 
         try {
             await dispatch(solutionsActions.revokeSolution(solutionId)).unwrap();
-
-            dispatch(solutionsActions.getReviewedBatchSolutionsForCourse(courseId));
-            dispatch(solutionsActions.getUnreviewedBatchSolutionsForCourse(courseId));
-            dispatch(solutionsActions.getBatchSolutionsForCourse(courseId));
         } catch (err) {
             console.error("❌ Ошибка при отзыве проверки:", err);
         }
     };
 
-    // Форматирование даты
     const formatDate = (isoString) => {
         try {
             return new Date(isoString).toLocaleString("ru-RU");
@@ -162,7 +145,6 @@ const Solutions = ({ courseId }) => {
         }
     };
 
-    // Фильтрация решений
     const displayedSolutions = React.useMemo(() => {
         switch (activeTab) {
             case 1:
@@ -174,18 +156,26 @@ const Solutions = ({ courseId }) => {
         }
     }, [solutions, reviewedSolutions, unreviewedSolutions, activeTab]);
 
-    // Загрузка содержимого файла (если текстовый)
+    // Загрузка содержимого файла
     const loadFileContent = async (file) => {
+        if (fileContent[file.id]) return; // уже загружено
+
         if (!file.url) {
-            return "Файл недоступен.";
+            setFileContent((prev) => ({ ...prev, [file.id]: "Файл недоступен." }));
+            return;
         }
 
         try {
-            const res = await fetch(file.url);
+            const res = await fetch(file.url, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+                },
+            });
+            if (!res.ok) throw new Error("Ошибка загрузки файла");
             const text = await res.text();
-            return text;
+            setFileContent((prev) => ({ ...prev, [file.id]: text }));
         } catch (err) {
-            return "Не удалось загрузить содержимое файла.";
+            setFileContent((prev) => ({ ...prev, [file.id]: "Не удалось загрузить содержимое файла." }));
         }
     };
 
@@ -289,7 +279,7 @@ const Solutions = ({ courseId }) => {
                 )}
             </StyledPaper>
 
-            {/* Диалог проверки решения */}
+            {/* Диалог проверки */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
                 <DialogTitle>Проверка решения</DialogTitle>
                 <DialogContent>
@@ -305,7 +295,6 @@ const Solutions = ({ courseId }) => {
                                 Отправлено: {formatDate(selectedSolution.submittedAt)}
                             </Typography>
 
-                            {/* Список файлов */}
                             <Box mt={2} mb={2}>
                                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                                     Приложенные файлы:
@@ -315,7 +304,14 @@ const Solutions = ({ courseId }) => {
                                         <Accordion
                                             key={file.id}
                                             expanded={expandedFile === file.id}
-                                            onChange={() => setExpandedFile(expandedFile === file.id ? null : file.id)}
+                                            onChange={() => {
+                                                if (expandedFile !== file.id) {
+                                                    setExpandedFile(file.id);
+                                                    loadFileContent(file);
+                                                } else {
+                                                    setExpandedFile(null);
+                                                }
+                                            }}
                                         >
                                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                                 <Typography variant="body2">{file.original_file_name}</Typography>
@@ -331,15 +327,15 @@ const Solutions = ({ courseId }) => {
                                                         overflow: "auto",
                                                     }}
                                                 >
-                                                    <Typography variant="caption" color="textSecondary" gutterBottom>
-                                                        Загрузка содержимого...
-                                                    </Typography>
-                                                    {/* Здесь можно добавить fetch-логику, если файлы доступны по URL */}
-                                                    {/* Пример: <pre>{await loadFileContent(file)}</pre> */}
-                                                    {/* Пока заглушка */}
-                                                    <Typography variant="body2" color="textSecondary">
-                                                        Предпросмотр файлов временно недоступен. Файл: {file.original_file_name}
-                                                    </Typography>
+                                                    {fileContent[file.id] ? (
+                                                        <Typography variant="body2" component="pre" sx={{ margin: 0 }}>
+                                                            {fileContent[file.id]}
+                                                        </Typography>
+                                                    ) : (
+                                                        <Typography variant="caption" color="textSecondary">
+                                                            Загрузка...
+                                                        </Typography>
+                                                    )}
                                                 </Paper>
                                             </AccordionDetails>
                                         </Accordion>
