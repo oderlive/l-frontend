@@ -171,7 +171,6 @@ const ManageUsers = () => {
                                     >
                                         <MenuItem value="STUDENT">Ученик</MenuItem>
                                         <MenuItem value="TEACHER">Учитель</MenuItem>
-                                        <MenuItem value="ADMIN">Администратор</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Grid>

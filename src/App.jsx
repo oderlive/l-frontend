@@ -96,14 +96,13 @@ function App() {
                                                     className={styles.tileContainer}
                                                 >
                                                     {courses.map((course, index) => (
-                                                        <Link to={`/course/${course.id}`} key={course.id}>
                                                             <Tile
+                                                                courseId={course.id}
                                                                 course={course.name}
                                                                 name={course.creator.name}
                                                                 surname={course.creator.surname}
                                                                 imageUrl={avatar}
                                                             />
-                                                        </Link>
                                                     ))}
 
                                                 </Box>
