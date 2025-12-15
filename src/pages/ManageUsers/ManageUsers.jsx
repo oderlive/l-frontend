@@ -85,7 +85,7 @@ const ManageUsers = () => {
     };
 
     return (
-        <Box sx={{ padding: 3 }}>
+        <Box sx={{ padding: 3, maxWidth: '900px' }}>
             <Typography variant="h5" gutterBottom>
                 Управление пользователями
             </Typography>

@@ -6,7 +6,6 @@ import {
     Avatar,
     Divider,
     useTheme,
-    Modal,
     TextField,
     FormControl,
     FormLabel,
@@ -22,8 +21,8 @@ const AccountManagement = () => {
     const dispatch = useDispatch();
     const theme = useTheme();
 
-    // Состояние для модального окна
-    const [openLoginModal, setOpenLoginModal] = useState(false);
+    // Состояние для показа формы входа
+    const [showLoginForm, setShowLoginForm] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -33,35 +32,21 @@ const AccountManagement = () => {
         setIsProfileModalOpen(false);
     };
 
-    // Обработчик отправки формы входа
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
             const authParams = { email, password };
-            await dispatch(makeAuth(authParams));
-            setOpenLoginModal(false); // Закрываем модальное окно после успешной аутентификации
+            await dispatch(makeAuth(authParams)).unwrap(); // Убедись, что makeAuth — async thunk
+            setIsProfileModalOpen(false); // Закрываем всё окно после входа
+            setShowLoginForm(false);
             setError('');
         } catch (err) {
             setError('Ошибка аутентификации. Проверьте логин и пароль.');
         }
     };
 
-    // Обработчики ввода
     const handleLoginChange = (e) => setEmail(e.target.value);
     const handlePasswordChange = (e) => setPassword(e.target.value);
-
-    // Стили для модального окна
-    const modalStyle = {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '400px',
-        backgroundColor: theme.palette.background.paper,
-        border: '1px solid #000',
-        boxShadow: theme.shadows[5],
-        padding: '20px',
-    };
 
     return (
         <Box
@@ -74,13 +59,8 @@ const AccountManagement = () => {
                 boxShadow: theme.shadows[2],
             }}
         >
-            <Box
-                sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    mb: 3,
-                }}
-            >
+            {/* Заголовок */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Avatar
                     sx={{
                         mr: 2,
@@ -93,93 +73,100 @@ const AccountManagement = () => {
                 <Typography variant="h5">Авторизация</Typography>
             </Box>
 
-            <Box sx={{ mb: 3 }}>
-                <Button
-                    variant="contained"
-                    sx={{ mb: 2, width: '100%' }}
-                    onClick={() => setOpenLoginModal(true)} // Открываем модальное окно
-                >
-                    Войти
-                </Button>
-                <Button
-                    variant="outlined"
-                    color="error"
-                    sx={{ width: '100%' }}
-                    onClick={handleLogout}
-                >
-                    Выйти
-                </Button>
-            </Box>
-
-            <Divider sx={{ mb: 3 }} />
-
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1,
-                }}
-            >
-                <Button
-                    variant="text"
-                    sx={{ textTransform: 'none' }}
-                    onClick={(e) => e.preventDefault()}
-                >
-                    Политика конфиденциальности
-                </Button>
-                <Button
-                    variant="text"
-                    sx={{ textTransform: 'none' }}
-                    onClick={(e) => e.preventDefault()}
-                >
-                    Условия использования
-                </Button>
-            </Box>
-
-            {/* Модальное окно входа */}
-            <Modal
-                open={openLoginModal}
-                onClose={() => setOpenLoginModal(false)}
-                aria-labelledby="modal-title"
-                aria-describedby="modal-description"
-            >
-                <Box sx={modalStyle}>
-                    <Typography id="modal-title" variant="h6" gutterBottom>
-                        Вход в систему
-                    </Typography>
-                    <form onSubmit={handleLogin}>
-                        <FormControl>
-                            <FormLabel>Логин</FormLabel>
-                            <TextField
-                                value={email}
-                                onChange={handleLoginChange}
-                                required
-                                fullWidth
-                            />
-                        </FormControl>
-                        <FormControl sx={{ mt: 2 }}>
-                            <FormLabel>Пароль</FormLabel>
-                            <TextField
-                                type="password"
-                                value={password}
-                                onChange={handlePasswordChange}
-                                required
-                                fullWidth
-                            />
-                        </FormControl>
-                        {error && (
-                            <FormHelperText sx={{ color: 'error.main' }}>{error}</FormHelperText>
-                        )}
+            {/* Основное меню (показываем, если НЕ в режиме формы входа) */}
+            {!showLoginForm ? (
+                <>
+                    <Box sx={{ mb: 3 }}>
                         <Button
-                            type="submit"
                             variant="contained"
-                            sx={{ mt: 2, width: '100%' }}
+                            sx={{ mb: 2, width: '100%' }}
+                            onClick={() => setShowLoginForm(true)}
                         >
                             Войти
                         </Button>
-                    </form>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            sx={{ width: '100%' }}
+                            onClick={handleLogout}
+                        >
+                            Выйти
+                        </Button>
+                    </Box>
+
+                    <Divider sx={{ mb: 3 }} />
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Button
+                            variant="text"
+                            sx={{ textTransform: 'none' }}
+                            onClick={(e) => e.preventDefault()}
+                        >
+                            Политика конфиденциальности
+                        </Button>
+                        <Button
+                            variant="text"
+                            sx={{ textTransform: 'none' }}
+                            onClick={(e) => e.preventDefault()}
+                        >
+                            Условия использования
+                        </Button>
+                    </Box>
+                </>
+            ) : (
+                // Форма входа (вместо основного меню)
+                <Box component="form" onSubmit={handleLogin}>
+                    <Typography variant="h6" gutterBottom>
+                        Вход в систему
+                    </Typography>
+
+                    <FormControl fullWidth>
+                        <FormLabel>Логин</FormLabel>
+                        <TextField
+                            value={email}
+                            onChange={handleLoginChange}
+                            required
+                            fullWidth
+                            margin="normal"
+                        />
+                    </FormControl>
+
+                    <FormControl fullWidth>
+                        <FormLabel>Пароль</FormLabel>
+                        <TextField
+                            type="password"
+                            value={password}
+                            onChange={handlePasswordChange}
+                            required
+                            fullWidth
+                            margin="normal"
+                        />
+                    </FormControl>
+
+                    {error && (
+                        <FormHelperText sx={{ color: 'error.main', mt: 1, mb: 2 }}>
+                            {error}
+                        </FormHelperText>
+                    )}
+
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Button
+                            type="button"
+                            variant="text"
+                            onClick={() => {
+                                setShowLoginForm(false);
+                                setError('');
+                            }}
+                            sx={{ flex: 1 }}
+                        >
+                            Назад
+                        </Button>
+                        <Button type="submit" variant="contained" sx={{ flex: 1 }}>
+                            Войти
+                        </Button>
+                    </Box>
                 </Box>
-            </Modal>
+            )}
         </Box>
     );
 };
