@@ -52,7 +52,7 @@ const ResetPasswordPage = () => {
             await dispatch(
                 resetPassword({
                     email,
-                    token,
+                    reset_password_token: token,
                     new_password: newPassword,
                 })
             ).unwrap();
