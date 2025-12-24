@@ -1,3 +1,4 @@
+// src/components/AccountManagement.jsx
 import React, { useState } from 'react';
 import {
     Box,
@@ -15,7 +16,13 @@ import {
 } from '@mui/material';
 import { useContext } from 'react';
 import { MenuContext } from '../../context/MenuContext';
-import { logout, makeAuth, sendMailForPasswordReset, resetPassword } from '../../features/auth/auth.js';
+import {
+    logout,
+    makeAuth,
+    sendMailForPasswordReset,
+    resetPassword,
+    resetTfa,
+} from '../../features/auth/auth.js';
 import { useDispatch } from 'react-redux';
 
 const AccountManagement = () => {
@@ -37,10 +44,22 @@ const AccountManagement = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    // Ошибки и статусы
+    // Ошибки и статусы для сброса пароля
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Состояния для модального окна сброса 2FA (только email и code)
+    const [isTfaResetModalOpen, setIsTfaResetModalOpen] = useState(false);
+    const [tfaResetEmail, setTfaResetEmail] = useState('');
+    const [tfaCode, setTfaCode] = useState('');
+    const [tfaResetEmailTouched, setTfaResetEmailTouched] = useState(false);
+    const [tfaCodeTouched, setTfaCodeTouched] = useState(false);
+
+    // Статусы для сброса 2FA
+    const [tfaResetError, setTfaResetError] = useState('');
+    const [tfaResetSuccess, setTfaResetSuccess] = useState(false);
+    const [tfaResetLoading, setTfaResetLoading] = useState(false);
 
     const handleLogout = () => {
         dispatch(logout());
@@ -122,7 +141,6 @@ const AccountManagement = () => {
             ).unwrap();
 
             setSuccess(true);
-            // Можно оставить модалку открытой, чтобы показать успех
         } catch (err) {
             setError(err.message || 'Не удалось сбросить пароль');
         } finally {
@@ -140,6 +158,65 @@ const AccountManagement = () => {
         setConfirmPassword('');
         setError('');
         setSuccess(false);
+    };
+
+    // --- Обработчик сброса 2FA через модальное окно (только email + code) ---
+    const handleResetTfaSubmit = async () => {
+        setTfaResetLoading(true);
+        setTfaResetError('');
+        setTfaResetSuccess(false);
+
+        // Валидация
+        if (!tfaResetEmail || !tfaCode) {
+            setTfaResetError('Заполните все поля');
+            setTfaResetLoading(false);
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(tfaResetEmail)) {
+            setTfaResetError('Введите корректный email');
+            setTfaResetLoading(false);
+            return;
+        }
+
+        if (tfaCode.length !== 6 || !/^\d{6}$/.test(tfaCode)) {
+            setTfaResetError('Код 2FA должен состоять из 6 цифр');
+            setTfaResetLoading(false);
+            return;
+        }
+
+        try {
+            await dispatch(resetTfa({
+                email: tfaResetEmail,
+                code: tfaCode,
+            })).unwrap();
+
+            setTfaResetSuccess(true);
+            // Очищаем поля
+            setTfaResetEmail('');
+            setTfaCode('');
+            // Сбрасываем флаги touched
+            setTfaResetEmailTouched(false);
+            setTfaCodeTouched(false);
+        } catch (err) {
+            setTfaResetError(err.message || 'Не удалось сбросить 2FA');
+        } finally {
+            setTfaResetLoading(false);
+        }
+    };
+
+    // --- Закрытие модального окна сброса 2FA ---
+    const closeTfaResetModal = () => {
+        setIsTfaResetModalOpen(false);
+        // Сбрасываем все состояния модального окна
+        setTfaResetEmail('');
+        setTfaCode('');
+        setTfaResetEmailTouched(false);
+        setTfaCodeTouched(false);
+        setTfaResetError('');
+        setTfaResetSuccess(false);
+        setTfaResetLoading(false);
     };
 
     return (
@@ -204,6 +281,23 @@ const AccountManagement = () => {
                             onClick={(e) => e.preventDefault()}
                         >
                             Условия использования
+                        </Button>
+
+                        {/* Кнопка для открытия модального окна сброса 2FA */}
+                        <Button
+                            variant="text"
+                            color="error"
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                fontSize: '0.875rem',
+                                p: 0,
+                                mt: 2,
+                                '&:hover': { bgcolor: 'transparent' },
+                            }}
+                            onClick={() => setIsTfaResetModalOpen(true)}
+                        >
+                            Забыли 2FA‑код?
                         </Button>
                     </Box>
                 </>
@@ -284,7 +378,99 @@ const AccountManagement = () => {
                 </Box>
             )}
 
-            {/* 🪄 Модалка: двухшаговый сброс пароля */}
+            {/* 🪄 Модальное окно: сброс 2FA (только email + code) */}
+            <Modal open={isTfaResetModalOpen} onClose={closeTfaResetModal}>
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: { xs: '90%', sm: 400 },
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                        boxShadow: 24,
+                        p: 4,
+                    }}
+                >
+                    {tfaResetSuccess ? (
+                        <>
+                            <Typography variant="h6" mb={2}>
+                                Готово!
+                            </Typography>
+                            <Alert severity="success" sx={{ mb: 3 }}>
+                                2FA успешно сброшен. Теперь можно настроить заново.
+                            </Alert>
+                            <Box display="flex" justifyContent="flex-end">
+                                <Button variant="contained" color="primary" onClick={closeTfaResetModal}>
+                                    Закрыть
+                                </Button>
+                            </Box>
+                        </>
+                    ) : (
+                        <>
+                            <Typography variant="h6" mb={2}>
+                                Сброс 2FA
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" mb={3}>
+                                Введите ваш email и текущий 6‑значный код 2FA.
+                            </Typography>
+
+                            <TextField
+                                label="Email"
+                                variant="outlined"
+                                fullWidth
+                                value={tfaResetEmail}
+                                onChange={(e) => setTfaResetEmail(e.target.value)}
+                                onBlur={() => setTfaResetEmailTouched(true)}
+                                error={tfaResetEmailTouched && !tfaResetEmail}
+                                helperText={tfaResetEmailTouched && !tfaResetEmail ? 'Введите email' : ' '}
+                                margin="normal"
+                                type="email"
+                                inputProps={{ maxLength: 254 }}
+                                autoFocus
+                            />
+
+                            <TextField
+                                label="Текущий 2FA‑код (6 цифр)"
+                                variant="outlined"
+                                fullWidth
+                                value={tfaCode}
+                                onChange={(e) => setTfaCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                                onBlur={() => setTfaCodeTouched(true)}
+                                error={tfaCodeTouched && (!tfaCode || tfaCode.length !== 6)}
+                                helperText={tfaCodeTouched && (!tfaCode || tfaCode.length !== 6) ? 'Введите 6 цифр' : ' '}
+                                margin="normal"
+                                inputProps={{
+                                    maxLength: 6,
+                                    inputMode: 'numeric',
+                                    pattern: '[0-9]{6}',
+                                }}
+                            />
+
+                            {tfaResetError && (
+                                <Alert severity="error" sx={{ mt: 2 }}>{tfaResetError}</Alert>
+                            )}
+
+                            <Box display="flex" gap={2} justifyContent="flex-end" mt={3}>
+                                <Button variant="outlined" onClick={closeTfaResetModal}>
+                                    Отмена
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    disabled={tfaResetLoading || !tfaResetEmail || !tfaCode}
+                                    onClick={handleResetTfaSubmit}
+                                >
+                                    {tfaResetLoading ? 'Сброс...' : 'Сбросить 2FA'}
+                                </Button>
+                            </Box>
+                        </>
+                    )}
+                </Box>
+            </Modal>
+
+            {/* 🪄 Модальное окно: двухшаговый сброс пароля */}
             <Modal open={isPasswordResetModalOpen} onClose={closeResetModal}>
                 <Box
                     sx={{
@@ -382,7 +568,7 @@ const AccountManagement = () => {
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         margin="normal"
                                         required
-                                        error={!!error && !newPassword}
+                                        error={!!error && newPassword.length < 6}
                                         sx={{ mb: 2 }}
                                     />
 
@@ -394,7 +580,7 @@ const AccountManagement = () => {
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         margin="normal"
                                         required
-                                        error={!!error && !confirmPassword}
+                                        error={!!error && confirmPassword !== newPassword}
                                         helperText={error}
                                         sx={{ mb: 2 }}
                                     />
@@ -422,6 +608,7 @@ const AccountManagement = () => {
                     )}
                 </Box>
             </Modal>
+
         </Box>
     );
 };

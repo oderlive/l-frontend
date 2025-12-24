@@ -169,8 +169,8 @@ const ManageUsers = () => {
                                             handleUserChange(userIndex, 'role', e.target.value)
                                         }
                                     >
-                                        <MenuItem value="STUDENT">Ученик</MenuItem>
-                                        <MenuItem value="TEACHER">Учитель</MenuItem>
+                                        <MenuItem value="STUDENT">Учащийся</MenuItem>
+                                        <MenuItem value="TEACHER">Преподаватель</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Grid>
