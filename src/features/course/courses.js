@@ -66,3 +66,45 @@ export const deleteCourseById = async (courseId) => {
         throw error.response?.data || error.message || error;
     }
 };
+
+export const addUserToCourse = async (courseId, userId) => {
+    try {
+        const config = { ...getAuthHeaders() };
+        const response = await axios.patch(
+            `${ENDPOINTS.COURSES}/${courseId}/add-users/user-id-list`,
+            [userId] , // Передаем ID пользователя
+            config
+        );
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message || error;
+    }
+};
+
+export const addUsersToCourseByIdList = async (courseId, groupIdList) => {
+    try {
+        const config = { ...getAuthHeaders() }; // Используем заголовки с токеном
+        const response = await axios.patch(
+            `${ENDPOINTS.COURSES}/${courseId}/add-users/group-id-list`,
+            groupIdList , // Передаем массив ID групп
+            config
+        );
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message || error;
+    }
+};
+
+export const getCourseById = async (courseId) => {
+    try {
+        const config = { ...getAuthHeaders() }; // Используем заголовки с токеном
+        const response = await axios.get(
+            `${ENDPOINTS.COURSES}/${courseId}`,
+            config
+        );
+        console.log(response.data);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message || error;
+    }
+};
