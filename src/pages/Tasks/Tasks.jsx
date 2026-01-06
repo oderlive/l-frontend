@@ -29,9 +29,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import * as tasksActions from '../../features/tasks/tasks';
 import * as solutionsActions from '../../features/solution/solutions';
 import { getTasksByCourseAndUserId, getTasksByCourseId } from '../../features/tasks/tasks';
-import { fetchUserInstitution } from '../../features/users/usersSlice';
 import { selectTasks, selectIsLoading, selectError } from '../../features/tasks/tasksSlice';
 import TaskItem from "./TaskItem";
+import {fetchUserInstitution} from "../../features/users/users";
 
 const Tasks = ({ courseId }) => {
     const dispatch = useDispatch();

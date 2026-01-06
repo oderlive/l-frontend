@@ -20,8 +20,10 @@ import {
     disableTfa,
     sendMailForTfaSecretReset,
 } from '../../features/auth/auth';
-import { fetchUserInstitution, selectUserInstitution } from '../../features/users/usersSlice';
+import { selectUserInstitution } from '../../features/users/usersSlice';
+
 import { useNavigate } from 'react-router-dom';
+import {fetchUserInstitution} from "../../features/users/users";
 
 const Settings = () => {
     const dispatch = useDispatch();
