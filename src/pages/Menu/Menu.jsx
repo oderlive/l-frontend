@@ -75,8 +75,8 @@ const Menu = ({ setSelectedComponent }) => {
 
     useEffect(() => {
         loadInstitutions();
-        const intervalId = setInterval(loadInstitutions, 60000);
-        return () => clearInterval(intervalId);
+        // const intervalId = setInterval(loadInstitutions, 60000);
+        // return () => clearInterval(intervalId);
     }, []);
 
 
@@ -200,8 +200,8 @@ const Menu = ({ setSelectedComponent }) => {
         const token = localStorage.getItem('access_token');
         if (token) {
             loadInstitutions();
-            const intervalId = setInterval(loadInstitutions, 10000); // автообновление каждую минуту
-            return () => clearInterval(intervalId);
+            // const intervalId = setInterval(loadInstitutions, 10000); // автообновление каждую минуту
+            // return () => clearInterval(intervalId);
         }
     }, []);
 
@@ -519,7 +519,7 @@ const Menu = ({ setSelectedComponent }) => {
         <Button size="small">Модуль поощрений</Button>
       </span>
             <span className={styles.title} onClick={() => navigate('/manage-users')}>
-        <Button size="small">Добавить пользователя</Button>
+        <Button size="small">Управление пользователями</Button>
       </span>
             {/* Кнопка "Добавить учебное заведение" — всегда видна */}
             <Box width="100%" sx={{ mt: 2 }}>

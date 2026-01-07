@@ -114,7 +114,7 @@ const usersSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             });
-        // searchUsers
+        // deleteSearchUsers
         builder
             .addCase('users/deleteSearchUsers/pending', (state) => {
                 state.loading = true;

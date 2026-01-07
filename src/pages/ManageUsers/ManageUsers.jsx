@@ -93,8 +93,8 @@ const ManageUsers = () => {
     // Эффект для сброса статуса после успешной операции
     useEffect(() => {
         if (submitStatus === 'success') {
-            const timer = setTimeout(() => setSubmitStatus(null), 5000);
-            return () => clearTimeout(timer);
+            // const timer = setTimeout(() => setSubmitStatus(null), 5000);
+            // return () => clearTimeout(timer);
         }
     }, [submitStatus]);
 
@@ -445,7 +445,7 @@ const ManageUsers = () => {
             </Paper>
 
             {/* Секция результатов поиска — отображается только после поиска и при наличии данных */}
-            {!isSearching && searchResults && (
+            {!isSearching && searchQuery && searchResults && searchResults.length !== 0 && (
                 <Paper elevation={3} sx={{ padding: 3, marginBottom: 4 }}>
                     <Typography variant="h6" gutterBottom>
                         Найденный пользователь
