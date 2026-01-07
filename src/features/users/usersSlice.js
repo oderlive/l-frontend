@@ -101,8 +101,14 @@ const usersSlice = createSlice({
                 state.error = null;
             })
             .addCase('users/searchUsers/fulfilled', (state, action) => {
+                console.log('1. Получен action:', action);
+                console.log('2. action.payload:', action.payload);
+                console.log('3. action.payload.data:', action.payload.data);
+
                 state.loading = false;
-                state.searchResults = action.payload.data || [];
+                state.searchResults = action.payload || [];
+
+                console.log('4. Записано в state.searchResults:', state.searchResults);
             })
             .addCase('users/searchUsers/rejected', (state, action) => {
                 state.loading = false;

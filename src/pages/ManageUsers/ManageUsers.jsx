@@ -19,7 +19,7 @@ import {
     Dialog,
     DialogTitle,
     DialogContent,
-    DialogActions,
+    DialogActions, Divider,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -165,13 +165,8 @@ const ManageUsers = () => {
                 user_email: searchQuery.trim()
             })).unwrap();
 
-            console.log('Полный ответ от searchUsers:', result); // ВАЖНО: проверьте здесь
+            console.log('Полный ответ от searchUsers:', result);
 
-            // Дополнительно проверьте, что попадает в Redux
-            setTimeout(() => {
-                console.log('Текущее состояние searchResults:', searchResults);
-                searchResults = result
-            }, 100);
         } catch (error) {
             console.error('Ошибка поиска:', error);
             setSubmitStatus('error');
@@ -180,6 +175,7 @@ const ManageUsers = () => {
             setIsSearching(false);
         }
     };
+
 
 
     // Открытие диалога удаления
@@ -228,6 +224,11 @@ const ManageUsers = () => {
             handleSearch();
         }
     };
+
+    useEffect(() => {
+        console.log('searchResults обновлены:', searchResults);
+    }, [searchResults]);
+
 
     return (
         <Box sx={{ padding: 3, maxWidth: '1200px', margin: '0 auto' }}>
@@ -443,113 +444,99 @@ const ManageUsers = () => {
                 </Grid>
             </Paper>
 
-            {/* Секция результатов поиска */}
-            {searchResults && searchResults.length > 0 && (
-                <Paper elevation={3} sx={{ padding: 3 }}>
-                    <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                        Результаты поиска ({searchResults.length})
+            {/* Секция результатов поиска — отображается только после поиска и при наличии данных */}
+            {!isSearching && searchResults && (
+                <Paper elevation={3} sx={{ padding: 3, marginBottom: 4 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Найденный пользователь
                     </Typography>
 
-                    <Box
-                        sx={{
-                            maxHeight: '400px',
-                            overflowY: 'auto',
-                            border: '1px solid #e0e0e0',
-                            borderRadius: 2,
-                            '&::-webkit-scrollbar': {
-                                width: '8px',
-                            },
-                            '&::-webkit-scrollbar-track': {
-                                backgroundColor: '#f1f1f1',
-                                borderRadius: 4,
-                            },
-                            '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: '#c1c1c1',
-                                borderRadius: 4,
-                            }
-                        }}
-                    >
-                        {searchResults.map((user, index) => (
-                            <Box
-                                key={user.id || index}
-                                sx={{
-                                    padding: 2,
-                                    borderBottom: index !== searchResults.length - 1 ? '1px solid #f0f0f0' : 'none',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    backgroundColor: index % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(0,0,0,0.04)',
-                                    }
-                                }}
-                            >
-                                <Box>
-                                    <Typography variant="body1" fontWeight="600">
-                                        {user.surname} {user.name} {user.patronymic || ''}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                        <strong>Email:</strong> {user.email || '—'}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        <strong>Группа:</strong> {user.group || '—'}, <strong>Возраст:</strong> {user.age || '—'}
-                                    </Typography>
-                                    {user.institution && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            <strong>Учреждение:</strong> {user.institution.short_name || '—'}
-                                            {user.institution.type && (
-                                                <span> ({user.institution.type})</span>
-                                            )}
-                                        </Typography>
-                                    )}
-                                </Box>
+                    <Box sx={{
+                        backgroundColor: '#f8f9fa',
+                        border: '1px solid #e9ecef',
+                        borderRadius: 2,
+                        padding: 3
+                    }}>
+                        {/* Основная информация */}
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                                Персональные данные
+                            </Typography>
+                            <Box sx={{ pl: 2 }}>
+                                <Typography><strong>ФИО:</strong> {searchResults.surname} {searchResults.name} {searchResults.patronymic || '—'}</Typography>
+                                <Typography><strong>Email:</strong> {searchResults.email}</Typography>
+                                <Typography><strong>Возраст:</strong> {searchResults.age || '—'}</Typography>
+                            </Box>
+                        </Box>
 
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Chip
-                                        label={user.role === 'STUDENT' ? 'Учащийся' : 'Преподаватель'}
-                                        color={user.role === 'STUDENT' ? 'primary' : 'secondary'}
-                                        size="small"
-                                    />
-                                    <Chip
-                                        label={user.is_enabled ? 'Активен' : 'Неактивен'}
-                                        color={user.is_enabled ? 'success' : 'error'}
-                                        size="small"
-                                    />
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        color="primary"
-                                        onClick={() => {
-                                            // Здесь можно добавить логику редактирования
-                                            console.log('Редактировать пользователя:', user.id);
-                                        }}
-                                    >
-                                        Редактировать
-                                    </Button>
-                                    <Button
-                                        size="small"
-                                        variant="contained"
-                                        color="error"
-                                        startIcon={<DeleteIcon fontSize="small" />}
-                                        onClick={() => handleDeleteClick(user)}
-                                    >
-                                        Удалить
-                                    </Button>
+                        {/* Учреждение */}
+                        {searchResults.institution && (
+                            <Box sx={{ mb: 3 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                                    Учреждение
+                                </Typography>
+                                <Box sx={{ pl: 2 }}>
+                                    <Typography><strong>Название:</strong> {searchResults.institution.short_name}</Typography>
+                                    <Typography><strong>Тип:</strong> {searchResults.institution.type}</Typography>
+                                    <Typography><strong>ID:</strong> {searchResults.institution.id}</Typography>
                                 </Box>
                             </Box>
-                        ))}
+                        )}
+
+                        {/* Роль и статус */}
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+                            <Chip
+                                label={searchResults.role === 'STUDENT' ? 'Учащийся' : 'Преподаватель'}
+                                color={searchResults.role === 'STUDENT' ? 'primary' : 'secondary'}
+                            />
+                            <Chip
+                                label={searchResults.is_enabled ? 'Активен' : 'Неактивен'}
+                                color={searchResults.is_enabled ? 'success' : 'error'}
+                            />
+                        </Box>
+
+                        {/* Группа */}
+                        {searchResults.group && (
+                            <Box sx={{ mb: 2 }}>
+                                <Typography><strong>Группа:</strong> {searchResults.group}</Typography>
+                            </Box>
+                        )}
+
+                        {/* Технические данные */}
+                        <Divider sx={{ my: 2 }} />
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="caption" color="text.secondary">
+                            </Typography>
+                            <Box sx={{ pl: 2, mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary"><strong>ID пользователя:</strong> {searchResults.id}</Typography>
+                                <Typography variant="body2" color="text.secondary"><strong>Пароль:</strong> {searchResults.password}</Typography>
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    {/* Кнопка удаления */}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                            onClick={() => handleDeleteClick(searchResults)}
+                        >
+                            Удалить
+                        </Button>
                     </Box>
                 </Paper>
             )}
 
             {/* Сообщение, если поиск выполнен, но результатов нет */}
-            {!isSearching && searchResults && searchResults.length === 0 && searchQuery && (
+            {!isSearching && !searchResults && searchQuery && (
                 <Paper elevation={3} sx={{ padding: 3 }}>
                     <Typography variant="body1" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
                         По запросу "{searchQuery}" ничего не найдено. Попробуйте изменить критерии поиска.
                     </Typography>
                 </Paper>
             )}
+
 
             {/* Секция списка всех пользователей */}
             <Paper elevation={3} sx={{ padding: 3, mt: 4 }}>
