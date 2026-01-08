@@ -6,6 +6,8 @@ const initialState = {
     tasks: [], // список заданий (для операций LIST)
     loading: false, // флаг загрузки
     error: null, // ошибка при выполнении операций
+    fileBlob: null,       // для просмотра файла
+    zipBlob: null,        // архив задания
 };
 
 const tasksSlice = createSlice({
@@ -113,6 +115,36 @@ const tasksSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             });
+        // ===== ZIP архива =====
+        builder
+            .addCase(tasksActions.downloadTaskZip.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(tasksActions.downloadTaskZip.fulfilled, (state, action) => {
+                state.loading = false;
+                state.zipBlob = action.payload.data;
+            })
+            .addCase(tasksActions.downloadTaskZip.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            });
+
+// ===== Файл задания =====
+        builder
+            .addCase(tasksActions.getTaskFile.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(tasksActions.getTaskFile.fulfilled, (state, action) => {
+                state.loading = false;
+                state.fileBlob = action.payload.data;
+            })
+            .addCase(tasksActions.getTaskFile.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            });
+
     },
 });
 
@@ -120,5 +152,8 @@ export const selectTask = (state) => state.tasks.task;
 export const selectTasks = (state) => state.tasks.tasks;
 export const selectIsLoading = (state) => state.tasks.loading;
 export const selectError = (state) => state.tasks.error;
+export const selectTaskFile = (state) => state.tasks.fileBlob;
+export const selectTaskZip = (state) => state.tasks.zipBlob;
+
 
 export default tasksSlice.reducer;

@@ -193,3 +193,58 @@ export const getTasksByCourseAndUserId = createAsyncThunk(
         }
     }
 );
+
+export const downloadTaskZip = createAsyncThunk(
+    "tasks/downloadTaskZip",
+    async (taskId, { rejectWithValue }) => {
+        try {
+            const accessToken = localStorage.getItem("access_token");
+            if (!accessToken) {
+                return rejectWithValue("access_token не найден");
+            }
+
+            const response = await axiosInstance.get(
+                `${ENDPOINTS.TASKS}/${taskId}/zip`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                    responseType: "blob", // ВАЖНО
+                }
+            );
+
+            return { data: response.data, taskId };
+        } catch (error) {
+            return rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
+// Просмотр или скачивание файла задания
+export const getTaskFile = createAsyncThunk(
+    "tasks/getTaskFile",
+    async ({ taskId, fileId, download = false }, { rejectWithValue }) => {
+        try {
+            const accessToken = localStorage.getItem("access_token");
+            if (!accessToken) {
+                return rejectWithValue("access_token не найден");
+            }
+
+            const response = await axiosInstance.get(
+                `${ENDPOINTS.TASKS}/${taskId}/files/${fileId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                    params: { download },
+                    responseType: "blob", // ВАЖНО
+                }
+            );
+
+            return { data: response.data, fileId, download };
+        } catch (error) {
+            return rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
